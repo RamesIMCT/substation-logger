@@ -447,7 +447,9 @@ const initialSubs = [
   {id:'SUB-38', name:'PAINT RECTIFIER (NO.38)', unit:'kWh'}
 ];
 
-let subs    = jLoad('subs') || initialSubs;
+// บังคับให้ใช้ค่าจาก initialSubs ใหม่ทุกครั้งที่มีการโหลดหน้าเว็บ
+let subs    = initialSubs; 
+persist(); // บันทึกทับลง localStorage ทันที
 let records  = jLoad('records') || [];
 let apiUrl   = localStorage.getItem('apiUrl')  || '';
 let baseUrl  = localStorage.getItem('baseUrl') || '';
