@@ -412,34 +412,39 @@ tr:hover td{background:rgba(255,255,255,.018);}
 // STATE & PRE-DEFINED 28 SUBSTATIONS
 // ══════════════════════════════════════════
 const initialSubs = [
-  {id:'SUB-02',name:'Substation No.2',unit:'kWh'},
-  {id:'SUB-03',name:'Substation No.3',unit:'kWh'},
-  {id:'SUB-04',name:'Substation No.4',unit:'kWh'},
-  {id:'SUB-05',name:'Substation No.5',unit:'kWh'},
-  {id:'SUB-06',name:'Substation No.6',unit:'kWh'},
-  {id:'SUB-07',name:'Substation No.7',unit:'kWh'},
-  {id:'SUB-08',name:'Substation No.8',unit:'kWh'},
-  {id:'SUB-09',name:'Substation No.9',unit:'kWh'},
-  {id:'SUB-10',name:'Substation No.10',unit:'kWh'},
-  {id:'SUB-11',name:'Substation No.11',unit:'kWh'},
-  {id:'SUB-12',name:'Substation No.12',unit:'kWh'},
-  {id:'SUB-15',name:'Substation No.15',unit:'kWh'},
-  {id:'SUB-18',name:'Substation No.18',unit:'kWh'},
-  {id:'SUB-19',name:'Substation No.19',unit:'kWh'},
-  {id:'SUB-20',name:'Substation No.20',unit:'kWh'},
-  {id:'SUB-21',name:'Substation No.21',unit:'kWh'},
-  {id:'SUB-22',name:'Substation No.22',unit:'kWh'},
-  {id:'SUB-24',name:'Substation No.24',unit:'kWh'},
-  {id:'SUB-27',name:'Substation No.27',unit:'kWh'},
-  {id:'SUB-28',name:'Substation No.28',unit:'kWh'},
-  {id:'SUB-29',name:'Substation No.29',unit:'kWh'},
-  {id:'SUB-30',name:'Substation No.30',unit:'kWh'},
-  {id:'SUB-31',name:'Substation No.31',unit:'kWh'},
-  {id:'SUB-33/35',name:'Substation No.33/35',unit:'kWh'},
-  {id:'SUB-34',name:'Substation No.34',unit:'kWh'},
-  {id:'SUB-36',name:'Substation No.36',unit:'kWh'},
-  {id:'SUB-37',name:'Substation No.37',unit:'kWh'},
-  {id:'SUB-38',name:'Substation No.38',unit:'kWh'}
+  // ใบที่ 1: กลุ่ม FINAL ASM, FRAME และ HEAD OFFICE
+  {id:'SUB-02', name:'FINAL ASM SHOP (NO.2)', unit:'kWh'},
+  {id:'SUB-03', name:'FINAL ASM SHOP (NO.3)', unit:'kWh'},
+  {id:'SUB-04', name:'FINAL ASM SHOP (NO.4)', unit:'kWh'},
+  {id:'SUB-31', name:'HEAD OFFICE (NO.31)', unit:'kWh'},
+  {id:'SUB-05', name:'FINAL ASM SHOP (NO.5)', unit:'kWh'},
+  {id:'SUB-21', name:'FINAL ASM SHOP (NO.21)', unit:'kWh'},
+  {id:'SUB-22', name:'FINAL ASM SHOP (NO.22)', unit:'kWh'},
+  {id:'SUB-33', name:'FRAME SHOP (NO.33)', unit:'kWh'},
+  {id:'SUB-34', name:'FRAME SHOP (NO.34)', unit:'kWh'},
+  {id:'SUB-36', name:'FRAME PAINT RECTIFIER (NO.36)', unit:'kWh'},
+  {id:'SUB-37', name:'FRAME SHOP (NO.37)', unit:'kWh'},
+
+  // ใบที่ 2: กลุ่ม BODY SHOP
+  {id:'SUB-24', name:'BODY SHOP (NO.24)', unit:'kWh'},
+  {id:'SUB-15', name:'BODY SHOP (NO.15)', unit:'kWh'},
+  {id:'SUB-18', name:'BODY SHOP (NO.18)', unit:'kWh'},
+  {id:'SUB-19', name:'BODY SHOP (NO.19)', unit:'kWh'},
+  {id:'SUB-20', name:'BODY SHOP (NO.20)', unit:'kWh'},
+  {id:'SUB-27', name:'BODY SHOP (NO.27)', unit:'kWh'},
+  {id:'SUB-28', name:'BODY SHOP (NO.28)', unit:'kWh'},
+  {id:'SUB-29', name:'BODY SHOP (NO.29)', unit:'kWh'},
+  {id:'SUB-30', name:'BODY SHOP (NO.30)', unit:'kWh'},
+
+  // ใบที่ 3: กลุ่ม AIR COMPRESSOR & PAINT SHOP & RECTIFIER
+  {id:'SUB-06', name:'AIR COMPRESSOR (NO.6)', unit:'kWh'},
+  {id:'SUB-07', name:'AIR COMPRESSOR (NO.7)', unit:'kWh'},
+  {id:'SUB-08', name:'CONTROL AIR COMPRESSOR (NO.8)', unit:'kWh'},
+  {id:'SUB-09', name:'PAINT SHOP (NO.9)', unit:'kWh'},
+  {id:'SUB-10', name:'PAINT SHOP (NO.10)', unit:'kWh'},
+  {id:'SUB-11', name:'PAINT SHOP (NO.11)', unit:'kWh'},
+  {id:'SUB-12', name:'PAINT SHOP (NO.12)', unit:'kWh'},
+  {id:'SUB-38', name:'PAINT RECTIFIER (NO.38)', unit:'kWh'}
 ];
 
 let subs    = jLoad('subs') || initialSubs;
