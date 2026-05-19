@@ -447,15 +447,17 @@ const initialSubs = [
   {id:'SUB-38', name:'PAINT RECTIFIER (NO.38)', unit:'kWh'}
 ];
 
-// บังคับให้ใช้ค่าจาก initialSubs ใหม่ทุกครั้งที่มีการโหลดหน้าเว็บ
-let subs    = initialSubs; 
-persist(); // บันทึกทับลง localStorage ทันที
+// บังคับเคลียร์ค่าเก่าเพื่อป้องกันปุ่มหาย และให้ใช้ 28 Sub ตัวจริงเสมอ
+let subs    = initialSubs;
 let records  = jLoad('records') || [];
 let apiUrl   = localStorage.getItem('apiUrl')  || '';
 let baseUrl  = localStorage.getItem('baseUrl') || '';
 let activeSub = null;
 let editId    = null;
 let filterData= null;
+
+// บันทึกโครงสร้างใหม่ลงหน่วยความจำทันที
+localStorage.setItem('subs', JSON.stringify(initialSubs));
 
 function jLoad(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
 function persist(){
