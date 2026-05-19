@@ -340,7 +340,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
         กรอก URL ที่คุณใช้รันตัวแอปนี้ (เช่น ลิงก์จาก GitHub Pages) เพื่อให้ QR Code ที่ได้สามารถนำไปติดหน้าระบบควบคุม สแกนแล้วเปิดใช้งานได้ทันทีครับ
       </div>
       <div class="f-row"><label class="f-label">Base URL</label>
-        <input class="f-input" type="url" id="base-url-input" placeholder="https://yourusername.github.io/substation-logger/substation_meter_recorder.html" oninput="saveBaseUrl()">
+        <input class="f-input" type="url" id="base-url-input" placeholder="https://yourusername.github.io/substation-logger/" oninput="saveBaseUrl()">
       </div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">ตัวอย่าง URL ที่ฝังใน QR:</div>
       <div class="url-display" id="sample-url">—</div>
@@ -464,32 +464,43 @@ const initialSubs = [
   {id:'SUB-38', name:'NO.38', zone:'38 Paint Shop', unit:'kWh'}
 ];
 
-let subs    = initialSubs;
-let records  = jLoad('records') || [];
-let appMode  = "basic"; // โหมดเริ่มต้นคือพื้นฐาน (basic)
+const apiUrl = "https://script.google.com/macros/s/AKfycbyujjgdUi8gPrG5U1gT8mEiUuqCeaR_VadShLJkF_evlyLRlkwQSpnvgpJ6g3Y5I3iGEA/exec";
 
-const fixedApiUrl = "https://script.google.com/macros/s/AKfycbyujjgdUi8gPrG5U1gT8mEiUuqCeaR_VadShLJkF_evlyLRlkwQSpnvgpJ6g3Y5I3iGEA/exec";
-let apiUrl   = fixedApiUrl;
-let baseUrl  = localStorage.getItem('baseUrl') || '';
+let subs = JSON.parse(localStorage.getItem('subs')) || initialSubs;
+let records = JSON.parse(localStorage.getItem('records')) || [];
+let appMode = "basic"; 
 let activeSub = null;
-let editId    = null;
-let filterData= null;
+let currentEditIndex = null;
 
-localStorage.setItem('subs', JSON.stringify(initialSubs));
-localStorage.setItem('apiUrl', fixedApiUrl);
-
-function jLoad(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
 function persist(){
-  localStorage.setItem('subs',    JSON.stringify(subs));
+  localStorage.setItem('subs', JSON.stringify(subs));
   localStorage.setItem('records', JSON.stringify(records));
 }
 
 // ══════════════════════════════════════════
-// ADMIN VISIBILITY MODE CONTROL (รหัส 1234)
+// UI & NAVIGATION ENGINE
 // ══════════════════════════════════════════
+function goTab(tabId) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  
+  const panel = document.getElementById('panel-' + tabId);
+  if(panel) panel.classList.add('active');
+  
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(t => {
+    if(t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${tabId}'`)) {
+      t.classList.add('active');
+    }
+  });
+  
+  if (tabId === 'chart') renderChart();
+  if (tabId === 'qrcodes') renderQRCodes();
+  if (tabId === 'settings') renderSettings();
+}
+
 function toggleAdminMode() {
   const btn = document.getElementById('btn-admin-toggle');
-  
   if (appMode === "basic") {
     let pwd = prompt("🔐 กรุณากรอกรหัสผ่านผู้ดูแลระบบเพื่อเปิดเมนูตั้งค่า:");
     if (pwd === "1234") {
@@ -512,24 +523,36 @@ function toggleAdminMode() {
 }
 
 function updateAdminVisibility() {
-  const adminTabs = document.querySelectorAll('.admin-only');
-  adminTabs.forEach(tab => {
+  document.querySelectorAll('.admin-only').forEach(tab => {
     tab.style.display = (appMode === "admin") ? "block" : "none";
   });
 }
 
+function updateBadge() {
+  const badge = document.getElementById('hdr-badge');
+  if(badge) badge.textContent = `${records.length} records`;
+}
+
+function toast(msg, type = "success") {
+  const el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'on';
+  if(type === 'err') el.classList.add('err');
+  if(type === 'warn') el.classList.add('warn');
+  setTimeout(() => { el.className = ''; }, 3000);
+}
+
 // ══════════════════════════════════════════
-// API CALLS
+// API CONNECTIVITY (GOOGLE SHEETS)
 // ══════════════════════════════════════════
 async function apiGet(params){
-  if(!apiUrl) return null;
   const url = apiUrl + '?' + new URLSearchParams(params).toString();
   const res = await fetch(url, {method:'GET'});
   return res.json();
 }
 
 async function apiPost(body){
-  if(!apiUrl) return null;
   const res = await fetch(apiUrl, {
     method:'POST',
     body: JSON.stringify(body)
@@ -538,11 +561,12 @@ async function apiPost(body){
 }
 
 function setSyncStatus(status, msg){
-  const dot    = document.getElementById('sync-dot');
+  const dot = document.getElementById('sync-dot');
   const banner = document.getElementById('sync-banner');
-  const icon   = document.getElementById('sync-banner-icon');
-  const bmsg   = document.getElementById('sync-banner-msg');
+  const icon = document.getElementById('sync-banner-icon');
+  const bmsg = document.getElementById('sync-banner-msg');
   if(!dot || !banner) return;
+  
   dot.className = 'sync-dot ' + (status==='ok'?'ok':status==='busy'?'busy':'err');
   if(status==='busy'){
     banner.className='sync-banner show loading';
@@ -563,10 +587,10 @@ async function loadFromServer(){
   try{
     const data = await apiGet({action:'getAll'});
     if(!data || data.error) throw new Error(data?data.error:'No Response');
-    if(data.records && data.records.length) records = data.records.map(r=>({...r, kwh:parseFloat(r.kwh)||0}));
+    if(data.records) records = data.records.map(r=>({...r, kwh:parseFloat(r.kwh)||0, used:parseFloat(r.used)||0}));
     persist();
     setSyncStatus('ok','โหลดสำเร็จ — '+records.length+' records');
-    renderCategorizedSubGrid(); renderData(); renderStats(); populateDropdowns(); updateBadge();
+    renderCategorizedSubGrid(); renderData(); populateDropdowns(); updateBadge();
     if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
     document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
   }catch(e){
@@ -578,633 +602,549 @@ async function loadFromServer(){
 async function testConnection(){
   setSyncStatus('busy','กำลังทดสอบ...');
   const box = document.getElementById('api-status-box');
+  if(!box) return;
+  box.style.display = 'block';
+  box.className = 'info-box';
+  box.innerHTML = '⚡ กำลังส่งสัญญาณทดสอบ...';
+  
   try{
     const data = await apiGet({action:'getAll'});
-    if(!data || data.error) throw new Error(data?data.error:'Error Connection');
+    if(!data || data.error) throw new Error();
     setSyncStatus('ok','เชื่อมต่อสำเร็จ');
-    box.style.display='block';
-    box.innerHTML=`<div style="background:rgba(0,224,122,.1);border:1px solid rgba(0,224,122,.25);border-radius:8px;padding:10px;font-size:11px;color:var(--green);">✅ เชื่อมต่อเบหลังสำเร็จ — พบ ${(data.records||[]).length} records</div>`;
-    document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
+    box.style.borderColor = 'var(--green)';
+    box.style.background = 'rgba(0, 224, 122, 0.05)';
+    box.innerHTML = `<strong style="color:var(--green);">⚡ เชื่อมต่อสำเร็จ!</strong> Cloud Database พร้อมใช้งาน`;
   }catch(e){
-    setSyncStatus('error','เชื่อมต่อไม่ได้: '+e.message);
-    box.style.display='block';
-    box.innerHTML=`<div style="background:rgba(255,61,85,.1);border:1px solid rgba(255,61,85,.25);border-radius:8px;padding:10px;font-size:11px;color:var(--red);">❌ ${e.message}</div>`;
+    setSyncStatus('error','เชื่อมต่อล้มเหลว');
+    box.style.borderColor = 'var(--red)';
+    box.style.background = 'rgba(255, 61, 85, 0.05)';
+    box.innerHTML = `<strong style="color:var(--red);">❌ เชื่อมต่อล้มเหลว!</strong> โปรดเช็กสัญญาณเครือข่าย`;
   }
-}
-
-function calcConsumed(subId){
-  const list = records.filter(r=>r.subId===subId).map(r=>({...r}))
-    .sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1);
-  list.forEach((r,i)=>{
-    if(i===0){ r.consumed=null; r.consumedLabel='ครั้งแรก'; }
-    else{
-      const diff = r.kwh - list[i-1].kwh;
-      r.consumed = diff>=0 ? diff : null;
-      r.consumedLabel = diff>=0 ? diff.toLocaleString(undefined,{maximumFractionDigits:2}) : '⚠️reset';
-    }
-  });
-  return list;
-}
-
-window.onload = function() {
-  init();
-};
-
-function init(){
-  setNow();
-  renderCategorizedSubGrid(); populateDropdowns();
-  renderData(); renderStats(); updateBadge();
-  document.getElementById('api-url-input').value = fixedApiUrl;
-  document.getElementById('base-url-input').value = baseUrl;
-  updateSampleUrl();
-  loadFromServer();
-  updateAdminVisibility();
-
-  const pSub = new URLSearchParams(location.search).get('sub');
-  if(pSub){
-    const found = subs.find(s=>s.id.toUpperCase()===pSub.toUpperCase());
-    goTab('entry');
-    setTimeout(()=>{
-      if(found){ 
-        selectSub(found.id); 
-        toast('📍 สแกน QR ตู้สำเร็จ: ' + found.id); 
-      }
-      else toast('ไม่พบข้อมูลสถานี: ' + pSub, 'warn');
-    }, 400);
-  }
-}
-
-function setNow(){
-  const n=new Date();
-  document.getElementById('in-date').value = n.toISOString().split('T')[0];
-  document.getElementById('in-time').value = n.toTimeString().slice(0,5);
-}
-
-const TAB_ORDER=['entry','data','chart','qrcodes','settings'];
-function goTab(name){
-  if((name === 'chart' || name === 'qrcodes' || name === 'settings') && appMode !== 'admin') {
-    toast("🔒 หน้าต่างนี้สำหรับผู้ดูแลระบบเท่านั้น!", "warn");
-    return;
-  }
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-  
-  // ค้นหาตำแหน่งเพื่อเปลี่ยนสถานะสีปุ่มแท็บ
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach(t => {
-    if(t.getAttribute('onclick').includes(`'${name}'`)) t.classList.add('active');
-  });
-
-  if(name==='data')     { renderData(filterData||undefined); renderStats(); }
-  if(name==='chart')    { populateDropdowns(); renderChart(); renderAllSubChart(); }
-  if(name==='qrcodes')  { renderQR(); }
-  if(name==='settings') { renderSubList(); }
 }
 
 // ══════════════════════════════════════════
-// RENDER CATEGORIZED SUB GRID & SEPARATE WORKFLOWS
+// RECORDING LOGIC (METER DATA ENTRY)
 // ══════════════════════════════════════════
-function renderCategorizedSubGrid(){
+function renderCategorizedSubGrid() {
   const container = document.getElementById('categorized-sub-areas');
   if(!container) return;
   container.innerHTML = '';
-
-  // โครงสร้างกลุ่มสถานที่ตามเงื่อนไขที่กำหนด
-  const definedZones = [
-    '2-5 UA Shop',
-    '6-12 Power Zone',
-    'Body Shop',
-    '21,22 La Shop',
-    '31 Head office',
-    'Frame Shop',
-    '38 Paint Shop'
-  ];
-
-  definedZones.forEach(zoneName => {
-    const zoneSubs = subs.filter(s => s.zone === zoneName);
-    if(zoneSubs.length === 0) return;
-
-    // สร้างกรอบของกลุ่มสถานที่
+  
+  const groups = {};
+  subs.forEach(s => {
+    if(!groups[s.zone]) groups[s.zone] = [];
+    groups[s.zone].push(s);
+  });
+  
+  for(const zone in groups) {
     const zoneBlock = document.createElement('div');
     zoneBlock.className = 'zone-block';
-    zoneBlock.innerHTML = `<div class="zone-title">🏢 โซน: ${zoneName}</div>`;
-
-    // สร้าง Grid สำหรับจัดเรียงปุ่มตู้ภายในกลุ่ม
+    zoneBlock.innerHTML = `<div class="zone-title">🏢 ${zone}</div>`;
+    
     const grid = document.createElement('div');
     grid.className = 'sub-grid';
-
-    zoneSubs.forEach(s => {
+    
+    groups[zone].forEach(s => {
       const hasData = records.some(r => r.subId === s.id);
-      const d = document.createElement('div');
-      d.className = 'sub-card' + (activeSub === s.id ? ' sel' : '') + (hasData ? ' has-data' : '');
-      d.onclick = () => selectSub(s.id);
-      d.innerHTML = `<div class="sc-id">${s.id}</div><div class="sc-name">${s.name}</div><div class="sc-dot"></div>`;
-      grid.appendChild(d);
+      const selClass = (activeSub && activeSub.id === s.id) ? 'sel' : '';
+      const dataClass = hasData ? 'has-data' : '';
+      
+      grid.innerHTML += `
+        <div class="sub-card ${dataClass} ${selClass}" onclick="selectSub('${s.id}')">
+          <div class="sc-dot"></div>
+          <div class="sc-id">${s.id}</div>
+          <div class="sc-name">${s.name}</div>
+        </div>
+      `;
     });
-
     zoneBlock.appendChild(grid);
     container.appendChild(zoneBlock);
-  });
+  }
 }
 
-// เมื่อกดเลือกตู้ Substation -> ซ่อนหน้ารายการใหญ่ และเปิดหน้าต่างกรอกข้อมูลตัวนั้นแยกเฉพาะ
-function selectSub(id){
-  activeSub = id;
-  const sub = subs.find(s=>s.id===id);
-  if(!sub) return;
-
-  // เปลี่ยนระบบการมองเห็น สลับหน้าจอทำงานแยกส่วน
+function selectSub(subId) {
+  activeSub = subs.find(s => s.id === subId);
+  if(!activeSub) return;
+  
   document.getElementById('sub-list-container-screen').style.display = 'none';
   document.getElementById('entry-section').style.display = 'block';
-
-  document.getElementById('banner-id').textContent = sub.id;
-  document.getElementById('banner-name').textContent = `${sub.name} [${sub.zone}]`;
+  
+  document.getElementById('banner-id').textContent = activeSub.id;
+  document.getElementById('banner-name').textContent = activeSub.name + ` (${activeSub.zone})`;
+  
   document.getElementById('in-kwh').value = '';
+  document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('in-time').value = new Date().toTimeString().slice(0, 5);
   document.getElementById('preview-box').style.display = 'none';
   
-  updateMeterSummary(id);
-  renderRecentSub(id);
-}
-
-// ย้อนกลับมาหน้ารายชื่อกลุ่มตู้ใหญ่
-function closeRecordingForm() {
-  activeSub = null;
-  document.getElementById('entry-section').style.display = 'none';
-  document.getElementById('sub-list-container-screen').style.display = 'block';
+  updateMeterSummary(activeSub);
+  renderRecentSub(activeSub);
   renderCategorizedSubGrid();
 }
 
-function updateMeterSummary(subId){
-  const subRecs = calcConsumed(subId);
-  const div = document.getElementById('meter-summary');
-  if(!subRecs.length) { div.style.display='none'; return; }
-  div.style.display='block';
-  const last = subRecs[subRecs.length-1];
-  document.getElementById('last-reading').textContent = last.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  
-  if(subRecs.length > 1) {
-    const prev = subRecs[subRecs.length-2];
-    document.getElementById('prev-reading').textContent = prev.kwh.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-  } else {
-    document.getElementById('prev-reading').textContent = '—';
-  }
-  document.getElementById('last-used').textContent = last.consumed !== null ? last.consumedLabel : '—';
+function closeRecordingForm() {
+  activeSub = null;
+  document.getElementById('sub-list-container-screen').style.display = 'block';
+  document.getElementById('entry-section').style.display = 'none';
+  renderCategorizedSubGrid();
 }
 
-function previewConsumption(){
-  const box = document.getElementById('preview-box');
-  const chip = document.getElementById('preview-chip');
-  const val = parseFloat(document.getElementById('in-kwh').value);
-  if(!activeSub || isNaN(val)){ box.style.display='none'; return; }
+function updateMeterSummary(sub) {
+  const subRecs = records.filter(r => r.subId === sub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+  const summaryCard = document.getElementById('meter-summary');
   
-  const subRecs = calcConsumed(activeSub);
-  if(!subRecs.length){ box.style.display='none'; return; }
-  
-  const lastKwh = subRecs[subRecs.length-1].kwh;
-  const diff = val - lastKwh;
-  box.style.display='block';
-  if(diff >= 0){
-    chip.className = 'chip chip-green';
-    chip.textContent = '+ ' + diff.toLocaleString(undefined,{maximumFractionDigits:2}) + ' kWh';
-  } else {
-    chip.className = 'chip chip-orange';
-    chip.textContent = 'ค่าลดลง? (' + diff.toLocaleString(undefined,{maximumFractionDigits:2}) + ') ⚠️';
-  }
-}
-
-function renderRecentSub(subId){
-  const body = document.getElementById('sub-recent-body');
-  const card = document.getElementById('sub-recent-card');
-  const subRecs = calcConsumed(subId).reverse().slice(0,5);
-  if(!subRecs.length){ card.style.display='none'; return; }
-  card.style.display='block';
-  body.innerHTML='';
-  subRecs.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${r.date}</td><td>${r.time}</td><td class="td-kwh">${r.kwh.toFixed(2)}</td><td class="td-used">${r.consumedLabel}</td><td>${r.user||'—'}</td><td>` +
-      (appMode === "admin" ? `<button class="btn btn-red btn-sm" style="padding:2px 6px;font-size:9px;" onclick="deleteRecord('${r.id}')">🗑</button>` : '') + `</td>`;
-    body.appendChild(tr);
-  });
-}
-
-// ══════════════════════════════════════════
-// DATA RECORD SAVE & ACTIONS
-// ══════════════════════════════════════════
-async function saveRecord(){
-  const btn = document.getElementById('save-btn');
-  const kwhInput = document.getElementById('in-kwh');
-  const val = parseFloat(kwhInput.value);
-  const date = document.getElementById('in-date').value;
-  const time = document.getElementById('in-time').value;
-  const user = document.getElementById('in-user').value.trim();
-  const note = document.getElementById('in-note').value.trim();
-
-  if(!activeSub){ toast('กรุณาเลือกตู้ Substation ก่อน','warn'); return; }
-  if(isNaN(val) || val < 0){ toast('กรุณากรอกค่ามิเตอร์สะสมให้ถูกต้อง','warn'); return; }
-  if(!date || !time){ toast('กรุณาระบุวันที่และเวลา','warn'); return; }
-  if(!user){ toast('กรุณากรอกชื่อผู้ตรวจสอบบันทึก','warn'); return; }
-
-  const newRec = {
-    id: 'REC-' + Date.now(),
-    subId: activeSub,
-    date: date,
-    time: time,
-    kwh: val,
-    user: user,
-    note: note
-  };
-
-  btn.disabled = true;
-  setSyncStatus('busy','กำลังส่งข้อมูลขึ้น Google Sheets...');
-
-  // บันทึกลงหน่วยความจำภายในเครื่องเป็นหลักก่อน (Offline Support)
-  records.push(newRec);
-  persist();
-  updateBadge();
-  selectSub(activeSub);
-
-  try {
-    const response = await apiPost({ action: 'save', record: newRec });
-    if(!response || response.error) throw new Error(response ? response.error : 'Network Fail');
-    setSyncStatus('ok','บันทึกและซิงค์ข้อมูลสำเร็จ');
-    toast('✅ บันทึกข้อมูลเรียบร้อยและอัปเดตออนไลน์แล้ว');
+  if(subRecs.length > 0) {
+    summaryCard.style.display = 'block';
+    const lastRec = subRecs[subRecs.length - 1];
+    const prevRec = subRecs.length > 1 ? subRecs[subRecs.length - 2] : null;
     
-    // เคลียร์ฟอร์มเมื่อเก็บค่าสำเร็จ
-    kwhInput.value = '';
-    closeRecordingForm();
-  } catch(e) {
-    setSyncStatus('error','บันทึกแบบ Offline: ' + e.message);
-    toast('💾 จัดเก็บในเครื่องแบบ Offline ชั่วคราว ระบบจะซิงค์ภายหลัง','warn');
-    closeRecordingForm();
-  } finally {
-    btn.disabled = false;
+    document.getElementById('last-reading').textContent = parseFloat(lastRec.kwh).toFixed(2);
+    document.getElementById('prev-reading').textContent = prevRec ? parseFloat(prevRec.kwh).toFixed(2) : '—';
+    document.getElementById('last-used').textContent = parseFloat(lastRec.used || 0).toFixed(2);
+  } else {
+    summaryCard.style.display = 'none';
   }
 }
 
-async function deleteRecord(id){
-  if(appMode !== "admin") {
-    toast("🔒 เฉพาะผู้ดูแลระบบเท่านั้นที่มีสิทธิ์ลบข้อมูล", "warn");
+function previewConsumption() {
+  if(!activeSub) return;
+  const inputVal = parseFloat(document.getElementById('in-kwh').value) || 0;
+  const subRecs = records.filter(r => r.subId === activeSub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+  const previewBox = document.getElementById('preview-box');
+  const previewChip = document.getElementById('preview-chip');
+  
+  if(inputVal <= 0) {
+    previewBox.style.display = 'none';
     return;
   }
-  if(!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรายการจดบันทึกนี้?')) return;
-  setSyncStatus('busy','กำลังส่งคำขอลบไปยังเซิร์ฟเวอร์...');
-  records = records.filter(r=>r.id!==id);
-  persist();
-  renderData(filterData||undefined);
-  renderStats();
-  updateBadge();
-  if(activeSub) { updateMeterSummary(activeSub); renderRecentSub(activeSub); }
   
-  try{
-    await apiPost({action:'delete', id:id});
-    setSyncStatus('ok','ลบรายการเรียบร้อย');
-    toast('ลบข้อมูลออกจากระบบสำเร็จ');
-  }catch(e){
-    setSyncStatus('error','ลบออกจากชีตล้มเหลว (ลบเฉพาะในเครื่องแล้ว)');
+  const baseKwh = subRecs.length > 0 ? subRecs[subRecs.length - 1].kwh : 0;
+  const used = inputVal - baseKwh;
+  previewBox.style.display = 'block';
+  
+  if(used >= 0) {
+    previewChip.className = "chip chip-green";
+    previewChip.textContent = `⚡ ใช้เพิ่มขึ้น: +${used.toFixed(2)} kWh`;
+  } else {
+    previewChip.className = "chip chip-orange";
+    previewChip.textContent = `⚠️ ค่าน้อยกว่าครั้งก่อน: ${used.toFixed(2)} kWh`;
   }
 }
 
-// ══════════════════════════════════════════
-// DATA FILTER & EXPORTS
-// ══════════════════════════════════════════
-function renderData(customList){
-  const body = document.getElementById('main-body');
-  const emp = document.getElementById('main-empty');
+function renderRecentSub(sub) {
+  const body = document.getElementById('sub-recent-body');
+  const card = document.getElementById('sub-recent-card');
   if(!body) return;
-  body.innerHTML='';
   
-  let source = customList || [];
-  if(!customList && !filterData) {
-    // รวมข้อมูลแยกกลุ่มเพื่อเอามาเรียงลำดับเวลาสืบค้น
-    let allSorted = [];
-    subs.forEach(s=>{ allSorted = allSorted.concat(calcConsumed(s.id)); });
-    allSorted.sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1);
-    source = allSorted;
+  const subRecs = records.filter(r => r.subId === sub.id)
+                         .sort((a,b) => new Date(b.date+'T'+b.time) - new Date(a.date+'T'+a.time))
+                         .slice(0, 5);
+                         
+  if(subRecs.length > 0) {
+    card.style.display = 'block';
+    body.innerHTML = subRecs.map(r => `
+      <tr>
+        <td>${r.date}</td>
+        <td>${r.time}</td>
+        <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
+        <td class="td-used">${parseFloat(r.used || 0).toFixed(2)}</td>
+        <td>${r.user || '—'}</td>
+        <td><button class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="editRecordInline('${r.id}')">✏️</button></td>
+      </tr>
+    `).join('');
+  } else {
+    card.style.display = 'none';
   }
-
-  if(!source.length){ emp.style.display='block'; return; }
-  emp.style.display='none';
-
-  source.forEach(r=>{
-    const subObj = subs.find(s=>s.id===r.subId) || {name:'Unknown', zone:'—'};
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td class="td-sub"><strong>${r.subId}</strong><br><small style="color:var(--muted);">${subObj.name}</small></td>` +
-      `<td>${r.date}</td><td>${r.time}</td><td class="td-kwh">${r.kwh.toFixed(2)}</td>` +
-      `<td class="td-used">${r.consumedLabel||'—'}</td><td>${r.user}</td><td><small>${r.note||'—'}</small></td>` +
-      `<td class="td-actions">` +
-      (appMode === "admin" ? `<button class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="openEdit('${r.id}')">✏️</button>` +
-       `<button class="btn btn-red btn-sm" style="padding:4px 8px;" onclick="deleteRecord('${r.id}')">🗑</button>` : '🔒 Mode') +
-      `</td>`;
-    body.appendChild(tr);
-  });
 }
 
-function applyFilter(){
-  const fSub = document.getElementById('fl-sub').value;
-  const fUser = document.getElementById('fl-user').value.toLowerCase().trim();
-  const fFrom = document.getElementById('fl-from').value;
-  const fTo = document.getElementById('fl-to').value;
-
-  let res = [];
-  subs.forEach(s=>{ res = res.concat(calcConsumed(s.id)); });
-
-  if(fSub) res = res.filter(r=>r.subId===fSub);
-  if(fUser) res = res.filter(r=>(r.user||'').toLowerCase().includes(fUser));
-  if(fFrom) res = res.filter(r=>r.date>=fFrom);
-  if(fTo) res = res.filter(r=>r.date<=fTo);
-
-  res.sort((a,b)=>(a.date+a.time)<(b.date+b.time)?1:-1);
-  filterData = res;
-  renderData(res);
-}
-
-function clearFilter(){
-  document.getElementById('fl-sub').value='';
-  document.getElementById('fl-user').value='';
-  document.getElementById('fl-from').value='';
-  document.getElementById('fl-to').value='';
-  filterData = null;
+async function saveRecord() {
+  if(!activeSub) return;
+  const kwhInput = document.getElementById('in-kwh').value;
+  const dateInput = document.getElementById('in-date').value;
+  const timeInput = document.getElementById('in-time').value;
+  const userInput = document.getElementById('in-user').value.trim();
+  const noteInput = document.getElementById('in-note').value.trim();
+  
+  if(!kwhInput || parseFloat(kwhInput) <= 0) { return toast("❌ กรุณากรอกค่ามิเตอร์ที่ถูกต้อง", "err"); }
+  if(!userInput) { return toast("❌ กรุณาระบุชื่อผู้บันทึก", "err"); }
+  
+  const kwh = parseFloat(kwhInput);
+  const subRecs = records.filter(r => r.subId === activeSub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+  const baseKwh = subRecs.length > 0 ? subRecs[subRecs.length - 1].kwh : 0;
+  const used = kwh - baseKwh;
+  
+  const newRecord = {
+    id: 'REC-' + Date.now(),
+    subId: activeSub.id,
+    subName: activeSub.name,
+    zone: activeSub.zone,
+    date: dateInput,
+    time: timeInput,
+    kwh: kwh,
+    used: used,
+    user: userInput,
+    note: noteInput
+  };
+  
+  records.push(newRecord);
+  persist();
+  toast("✅ บันทึกข้อมูลภายในเครื่องเรียบร้อย");
+  
+  document.getElementById('in-kwh').value = '';
+  document.getElementById('in-note').value = '';
+  
+  updateMeterSummary(activeSub);
+  renderRecentSub(activeSub);
   renderData();
-}
-
-function updateBadge(){
-  document.getElementById('hdr-badge').textContent = records.length + ' records';
-}
-
-function populateDropdowns(){
-  const s1 = document.getElementById('fl-sub');
-  const s2 = document.getElementById('chart-sub-sel');
-  const s3 = document.getElementById('edit-sub-sel');
-  if(!s1 || !s2) return;
+  updateBadge();
   
-  const opts = subs.map(s=>`<option value="${s.id}">${s.id} : ${s.name}</option>`).join('');
-  s1.innerHTML = '<option value="">ทั้งหมด</option>' + opts;
-  s2.innerHTML = '<option value="">เลือกตู้ Sub...</option>' + opts;
-  if(s3) s3.innerHTML = opts;
+  setSyncStatus('busy', 'กำลังซิงค์ขึ้น Google Sheets...');
+  try {
+    const response = await apiPost({ action: 'add', record: newRecord });
+    if(response && response.success) {
+      setSyncStatus('ok', 'ข้อมูลซิงค์สมบูรณ์');
+      loadFromServer();
+    } else { throw new Error(); }
+  } catch(e) {
+    setSyncStatus('error', 'ระบบฝากบันทึกไว้ในเครื่องออฟไลน์');
+  }
 }
 
-function renderStats(){
-  const boxes = document.getElementById('stats-boxes');
-  if(!boxes) return;
+// ══════════════════════════════════════════
+// DATA LOG TABLE & FILTER SYSTEM
+// ══════════════════════════════════════════
+function renderData() {
+  const body = document.getElementById('main-body');
+  const emptyEl = document.getElementById('main-empty');
+  if(!body) return;
   
-  let totalKwhUsed = 0;
-  subs.forEach(s=>{
-    calcConsumed(s.id).forEach(r=>{ if(r.consumed) totalKwhUsed+=r.consumed; });
-  });
+  const subFilter = document.getElementById('fl-sub').value;
+  const userFilter = document.getElementById('fl-user').value.toLowerCase().trim();
+  const fromFilter = document.getElementById('fl-from').value;
+  const toFilter = document.getElementById('fl-to').value;
+  
+  let filtered = [...records];
+  if(subFilter) filtered = filtered.filter(r => r.subId === subFilter);
+  if(userFilter) filtered = filtered.filter(r => r.user && r.user.toLowerCase().includes(userFilter));
+  if(fromFilter) filtered = filtered.filter(r => r.date >= fromFilter);
+  if(toFilter) filtered = filtered.filter(r => r.date <= toFilter);
+  
+  filtered.sort((a,b) => new Date(b.date+'T'+b.time) - new Date(a.date+'T'+a.time));
+  
+  if(filtered.length === 0) {
+    body.innerHTML = '';
+    emptyEl.style.display = 'block';
+  } else {
+    emptyEl.style.display = 'none';
+    body.innerHTML = filtered.map(r => `
+      <tr>
+        <td class="td-sub">${r.subId}</td>
+        <td>${r.date}</td>
+        <td>${r.time}</td>
+        <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
+        <td class="td-used">${parseFloat(r.used || 0).toFixed(2)}</td>
+        <td>${r.user || '—'}</td>
+        <td>${r.note || '—'}</td>
+        <td class="td-actions">
+          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="openEditModal('${r.id}')">✏️</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  renderStats(filtered);
+}
 
-  boxes.innerHTML = `
-    <div class="stat"><div class="stat-val" style="color:var(--accent);">${subs.length}</div><div class="stat-lbl">ตู้ควบคุมรวม</div></div>
-    <div class="stat"><div class="stat-val" style="color:var(--green);">${totalKwhUsed.toLocaleString(undefined,{maximumFractionDigits:1})}</div><div class="stat-lbl">พลังงานที่ใช้ไปรวม (kWh)</div></div>
+function renderStats(filteredRecords) {
+  const container = document.getElementById('stats-boxes');
+  if(!container) return;
+  const totalUsed = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.used) || 0), 0);
+  
+  container.innerHTML = `
+    <div class="stat">
+      <div class="stat-val">${filteredRecords.length}</div>
+      <div class="stat-lbl">จำนวนบันทึก (รายการ)</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--green);">${totalUsed.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+      <div class="stat-lbl">การใช้ไฟรวม (kWh)</div>
+    </div>
   `;
 }
 
-// ══════════════════════════════════════════
-// EDIT MODAL ACTIONS (ADMIN ONLY)
-// ══════════════════════════════════════════
-function openEdit(id){
-  if(appMode !== "admin"){ toast("🔒 สิทธิ์การแก้ไขระบบถูกปิดไว้", "warn"); return; }
-  editId = id;
-  const r = records.find(x=>x.id===id);
-  if(!r) return;
-  document.getElementById('edit-sub-sel').value = r.subId;
-  document.getElementById('edit-kwh').value = r.kwh;
-  document.getElementById('edit-date').value = r.date;
-  document.getElementById('edit-time').value = r.time;
-  document.getElementById('edit-user').value = r.user || '';
-  document.getElementById('edit-note').value = r.note || '';
-  document.getElementById('edit-modal').classList.add('open');
+function populateDropdowns() {
+  const flSub = document.getElementById('fl-sub');
+  const chartSub = document.getElementById('chart-sub-sel');
+  const editSub = document.getElementById('edit-sub-sel');
+  if(!flSub) return;
+  
+  const optionsHtml = `<option value="">ทั้งหมด</option>` + subs.map(s => `<option value="${s.id}">${s.id} - ${s.name}</option>`).join('');
+  flSub.innerHTML = optionsHtml;
+  if(chartSub) chartSub.innerHTML = `<option value="">เลือก Sub...</option>` + subs.map(s => `<option value="${s.id}">${s.id}</option>`).join('');
+  if(editSub) editSub.innerHTML = subs.map(s => `<option value="${s.id}">${s.id}</option>`).join('');
 }
 
-function closeEdit(){
-  document.getElementById('edit-modal').classList.remove('open');
-  editId = null;
+function applyFilter() { renderData(); toast("🔍 กรองข้อมูลเสร็จสิ้น"); }
+function clearFilter() {
+  document.getElementById('fl-sub').value = '';
+  document.getElementById('fl-user').value = '';
+  document.getElementById('fl-from').value = '';
+  document.getElementById('fl-to').value = '';
+  renderData();
+  toast("✖ ล้างตัวกรองแล้ว");
 }
-function closeEditIf(e){ if(e.target.id==='edit-modal') closeEdit(); }
 
-async function saveEdit(){
-  if(appMode !== "admin") return;
-  const rIdx = records.findIndex(x=>x.id===editId);
-  if(rIdx===-1) return;
-  
-  const updated = {
-    ...records[rIdx],
-    subId: document.getElementById('edit-sub-sel').value,
-    kwh: parseFloat(document.getElementById('edit-kwh').value)||0,
-    date: document.getElementById('edit-date').value,
-    time: document.getElementById('edit-time').value,
-    user: document.getElementById('edit-user').value.trim(),
-    note: document.getElementById('edit-note').value.trim()
-  };
+function exportExcel() {
+  if(records.length === 0) return toast("❌ ไม่มีข้อมูลให้ทำการ Export", "err");
+  const worksheet = XLSX.utils.json_to_sheet(records);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Substation_Logs");
+  XLSX.writeFile(workbook, `Substation_Logs_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast("📥 ดาวน์โหลดไฟล์ Excel เรียบร้อย");
+}
 
-  records[rIdx] = updated;
-  persist();
-  closeEdit();
-  renderData(filterData||undefined);
-  renderStats();
+// ══════════════════════════════════════════
+// CHART GENERATOR (PURE CSS POWER BARS)
+// ══════════════════════════════════════════
+function renderChart() {
+  const subId = document.getElementById('chart-sub-sel').value;
+  const chartArea = document.getElementById('chart-area');
+  if(!chartArea) return;
   
-  setSyncStatus('busy','กำลังอัปเดตข้อมูลการแก้ไขขึ้นระบบคลาวด์...');
-  try {
-    await apiPost({action:'edit', id:editId, record:updated});
-    setSyncStatus('ok','แก้ไขสำเร็จ');
-    toast('อัปเดตข้อมูลการแก้ไขเรียบร้อย');
-  } catch(e) {
-    setSyncStatus('error','บันทึกการแก้ไขเฉพาะในเครื่องแล้ว');
+  if(!subId) {
+    chartArea.innerHTML = `<div class="empty"><i>📈</i>กรุณาเลือก Substation เพื่อดูแนวโน้ม</div>`;
+  } else {
+    const subRecs = records.filter(r => r.subId === subId).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+    if(subRecs.length === 0) {
+      chartArea.innerHTML = `<div class="empty">ไม่มีข้อมูลของตู้นี้</div>`;
+    } else {
+      const maxUsed = Math.max(...subRecs.map(r => parseFloat(r.used) || 1), 1);
+      chartArea.innerHTML = subRecs.map(r => {
+        const pct = (Math.max(0, parseFloat(r.used) || 0) / maxUsed) * 100;
+        return `
+          <div class="bar-row">
+            <div class="bar-label">${r.date.slice(5)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width: ${pct}%"></div></div>
+            <div class="bar-val">${parseFloat(r.used||0).toFixed(1)} kWh</div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+  
+  // Dashboard Summary Bars
+  const allSubChart = document.getElementById('all-sub-chart');
+  if(allSubChart) {
+    const summary = {};
+    subs.forEach(s => summary[s.id] = 0);
+    records.forEach(r => { if(summary[r.subId] !== undefined) summary[r.subId] += parseFloat(r.used) || 0; });
+    const maxAll = Math.max(...Object.values(summary), 1);
+    
+    allSubChart.innerHTML = subs.map(s => {
+      const pct = (summary[s.id] / maxAll) * 100;
+      return `
+        <div class="bar-row">
+          <div class="bar-label" style="width:65px;">${s.id}</div>
+          <div class="bar-track"><div class="bar-fill" style="width: ${pct}%"></div></div>
+          <div class="bar-val">${summary[s.id].toFixed(1)} kWh</div>
+        </div>
+      `;
+    }).join('');
   }
 }
 
 // ══════════════════════════════════════════
-// CHARTS ENGINE (CSS BARS)
+// QR CODE GENERATOR (DEEP LINKING ENGINE)
 // ══════════════════════════════════════════
-function renderChart(){
-  const subId = document.getElementById('chart-sub-sel').value;
-  const area = document.getElementById('chart-area');
-  if(!area) return;
-  if(!subId){ area.innerHTML='<div class="empty">💡 เลือกตู้ Sub เพื่อดูกราฟการใช้ไฟแยกแต่ละรอบ</div>'; return; }
-
-  const subRecs = calcConsumed(subId).filter(r=>r.consumed !== null);
-  if(!subRecs.length){ area.innerHTML='<div class="empty">📭 ไม่พบประวัติการจดบันทึกที่มีความต่างหน่วยพลังงาน</div>'; return; }
-
-  let maxVal = Math.max(...subRecs.map(r=>r.consumed), 1);
-  let html = '<div style="margin-top:10px;">';
-  subRecs.reverse().slice(0,10).forEach(r=>{
-    const pct = (r.consumed / maxVal) * 100;
-    html += `<div class="bar-row">` +
-      `<div class="bar-label">${r.date.slice(5)}</div>` +
-      `<div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>` +
-      `<div class="bar-val">${r.consumed.toFixed(1)} kWh</div>` +
-      `</div>`;
-  });
-  html += '</div>';
-  area.innerHTML = html;
-}
-
-function renderAllSubChart(){
-  const area = document.getElementById('all-sub-chart');
-  if(!area) return;
-  
-  let summary = [];
-  subs.forEach(s=>{
-    let total = 0;
-    calcConsumed(s.id).forEach(r=>{ if(r.consumed) total+=r.consumed; });
-    summary.push({id:s.id, total:total});
-  });
-
-  let maxVal = Math.max(...summary.map(x=>x.total), 1);
-  let html = '<div style="margin-top:10px;">';
-  summary.forEach(x=>{
-    if(x.total === 0) return;
-    const pct = (x.total / maxVal) * 100;
-    html += `<div class="bar-row">` +
-      `<div class="bar-label" style="width:60px;text-align:left;"><strong>${x.id}</strong></div>` +
-      `<div class="bar-track"><div class="bar-fill" style="background:linear-gradient(90deg,var(--purple),var(--accent));width:${pct}%"></div></div>` +
-      `<div class="bar-val">${x.total.toFixed(1)} kWh</div>` +
-      `</div>`;
-  });
-  html += '</div>';
-  area.innerHTML = summary.some(x=>x.total>0) ? html : '<div class="empty">ไม่มีข้อมูลพลังงานรวมของสถานีไฟ</div>';
-}
-
-// ══════════════════════════════════════════
-// QR CODES SYSTEM
-// ══════════════════════════════════════════
-function saveBaseUrl(){
-  baseUrl = document.getElementById('base-url-input').value.trim();
-  localStorage.setItem('baseUrl', baseUrl);
+function saveBaseUrl() {
+  const url = document.getElementById('base-url-input').value.trim();
+  localStorage.setItem('base_url', url);
   updateSampleUrl();
+  renderQRCodes();
 }
-function updateSampleUrl(){
-  const disp = document.getElementById('sample-url');
-  if(!disp) return;
-  disp.textContent = baseUrl ? `${baseUrl}?sub=SUB-04` : 'ยังไม่ได้ตั้งค่า Base URL สำหรับการเจนลิงก์สแกนหน้างาน';
+
+function updateSampleUrl() {
+  const baseUrl = document.getElementById('base-url-input').value.trim() || window.location.href.split('?')[0];
+  document.getElementById('sample-url').textContent = baseUrl + '?sub=SUB-02';
 }
-function renderQR(){
+
+function renderQRCodes() {
   const grid = document.getElementById('qr-grid');
   if(!grid) return;
-  grid.innerHTML='';
-  if(!baseUrl){ grid.innerHTML='<div class="empty" style="grid-column:span 2;">⚠️ โปรดใส่ Base URL ของแอปด้านบนก่อนเพื่อสร้างลิงก์สำหรับติดหน้าตู้</div>'; return; }
+  grid.innerHTML = '';
   
-  subs.forEach(s=>{
+  const baseUrl = document.getElementById('base-url-input').value.trim() || window.location.href.split('?')[0];
+  
+  subs.forEach(s => {
     const item = document.createElement('div');
-    item.className='qr-item';
-    const finalUrl = `${baseUrl}?sub=${s.id}`;
-    item.innerHTML=`<div class="qi-id">${s.id}</div><div class="qi-name">${s.name}</div><div class="qi-qr" id="qr-holder-${s.id}"></div><div class="qi-url">${finalUrl}</div>`;
+    item.className = 'qr-item';
+    const fullUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `sub=${s.id}`;
+    
+    item.innerHTML = `
+      <div class="qi-id">${s.id}</div>
+      <div class="qi-name">${s.name}<br><span style="font-size:8px;color:var(--purple);">${s.zone}</span></div>
+      <div class="qi-qr" id="qr-holder-${s.id}"></div>
+      <div class="qi-url">${fullUrl}</div>
+    `;
     grid.appendChild(item);
     
-    new QRCode(document.getElementById(`qr-holder-${s.id}`), {
-      text: finalUrl, width: 110, height: 110, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
-    });
+    try {
+      new QRCode(document.getElementById(`qr-holder-${s.id}`), {
+        text: fullUrl, width: 110, height: 110,
+        colorDark : "#000000", colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.M
+      });
+    } catch(e){}
   });
 }
 
 // ══════════════════════════════════════════
-// SETTINGS & BACKUP UTILITIES (ADMIN ONLY)
+// MODAL & EDIT COMPONENT
 // ══════════════════════════════════════════
-function renderSubList(){
-  const container = document.getElementById('sub-list');
-  if(!container) return;
-  document.getElementById('sub-count').textContent = subs.length;
-  container.innerHTML = subs.map(s=>`<div style="display:flex;justify-content:between;align-items:center;background:var(--s3);padding:8px 12px;border-radius:6px;margin-bottom:5px;font-size:12px;">` +
-    `<div><strong style="color:var(--accent);">${s.id}</strong> - ${s.name} <small style="color:var(--muted)">[${s.zone}]</small></div>` +
-    (appMode === "admin" ? `<button class="btn btn-red btn-sm" style="padding:2px 8px;width:auto;" onclick="removeSub('${s.id}')">ลบ</button>` : '🔒') +
-    `</div>`).join('');
+function openEditModal(recordId) {
+  const rec = records.find(r => r.id === recordId);
+  if(!rec) return;
+  
+  currentEditIndex = records.findIndex(r => r.id === recordId);
+  
+  document.getElementById('edit-sub-sel').value = rec.subId;
+  document.getElementById('edit-kwh').value = rec.kwh;
+  document.getElementById('edit-date').value = rec.date;
+  document.getElementById('edit-time').value = rec.time;
+  document.getElementById('edit-user').value = rec.user || '';
+  document.getElementById('edit-note').value = rec.note || '';
+  
+  document.getElementById('edit-modal').classList.add('open');
 }
 
-function addSub(){
-  if(appMode !== "admin") { toast("🔒 หน้าต่างส่วนนี้เปิดสิทธิ์เฉพาะผู้ดูแลระบบ", "warn"); return; }
+function editRecordInline(recordId) { openEditModal(recordId); }
+function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); currentEditIndex = null; }
+function closeEditIf(e) { if(e.target.id === 'edit-modal') closeEdit(); }
+
+async function saveEdit() {
+  if(currentEditIndex === null) return;
+  
+  const subId = document.getElementById('edit-sub-sel').value;
+  const kwh = parseFloat(document.getElementById('edit-kwh').value) || 0;
+  const date = document.getElementById('edit-date').value;
+  const time = document.getElementById('edit-time').value;
+  const user = document.getElementById('edit-user').value.trim();
+  const note = document.getElementById('edit-note').value.trim();
+  
+  if(kwh <= 0 || !user) { return toast("❌ ข้อมูลไม่ครบถ้วน", "err"); }
+  
+  records[currentEditIndex] = { ...records[currentEditIndex], subId, kwh, date, time, user, note };
+  
+  // Re-calculate Consumption Chains for safety
+  const subRecs = records.filter(r => r.subId === subId).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+  for(let i=0; i<subRecs.length; i++){
+    const idx = records.findIndex(r => r.id === subRecs[i].id);
+    records[idx].used = i === 0 ? 0 : subRecs[i].kwh - subRecs[i-1].kwh;
+  }
+  
+  persist(); closeEdit(); toast("✅ แก้ไขข้อมูลสำเร็จ");
+  renderData();
+  if(activeSub) { updateMeterSummary(activeSub); renderRecentSub(activeSub); }
+  
+  setSyncStatus('busy', 'กำลังแก้ข้อมูลบน Server...');
+  try {
+    const response = await apiPost({ action: 'edit', record: records[currentEditIndex] });
+    if(response && response.success) { setSyncStatus('ok', 'อัปเดตเซิร์ฟเวอร์เสร็จสิ้น'); loadFromServer(); }
+  } catch(e) { setSyncStatus('error', 'ระบบเซฟออฟไลน์ในบราวเซอร์แทน'); }
+}
+
+// ══════════════════════════════════════════
+// ADMIN CONTROL PANELS (SETTINGS)
+// ══════════════════════════════════════════
+function renderSettings() {
+  document.getElementById('sub-count').textContent = subs.length;
+  document.getElementById('api-url-input').value = apiUrl;
+  const list = document.getElementById('sub-list');
+  if(!list) return;
+  
+  list.innerHTML = subs.map(s => `
+    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--s3); padding:8px 12px; margin-bottom:6px; border-radius:6px; font-size:12px;">
+      <div><strong style="color:var(--accent);">${s.id}</strong> - ${s.name} <span style="color:var(--muted); font-size:10px;">(${s.zone})</span></div>
+      <button class="btn btn-red btn-sm" style="padding:2px 8px; width:auto;" onclick="deleteSub('${s.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function addSub() {
   const id = document.getElementById('new-id').value.toUpperCase().trim();
   const name = document.getElementById('new-name').value.trim();
-  const unit = document.getElementById('new-unit').value.trim();
-  if(!id || !name || !unit){ toast('กรุณากรอกข้อมูลโครงสร้างตู้ให้ครบถ้วน','warn'); return; }
-  if(subs.some(s=>s.id===id)){ toast('รหัสตู้ Sub ID นี้มีอยู่ในระบบแล้ว','warn'); return; }
+  const unit = document.getElementById('new-unit').value.trim() || 'kWh';
   
-  // เพิ่มค่าและกำหนดเข้ากลุ่มทั่วไปชั่วคราวเพื่อให้คุณลบ/ย้ายได้
-  subs.push({id:id, name:name, zone:'2-5 UA Shop', unit:unit});
-  persist(); renderCategorizedSubGrid(); renderSubList(); populateDropdowns();
-  toast('➕ เพิ่มข้อมูลตู้ Substation ใหม่เรียบร้อย');
-  document.getElementById('new-id').value='';
-  document.getElementById('new-name').value='';
+  if(!id || !name) return toast("❌ กรุณากรอก ID และชื่อตู้หน้างาน", "err");
+  if(subs.some(s => s.id === id)) return toast("❌ มีรหัส Sub ID นี้อยู่แล้ว", "err");
+  
+  subs.push({ id, name, zone: 'Custom Added', unit });
+  persist(); toast("➕ เพิ่มตู้ใหม่เรียบร้อย");
+  document.getElementById('new-id').value = '';
+  document.getElementById('new-name').value = '';
+  renderSettings(); populateDropdowns(); renderCategorizedSubGrid();
 }
 
-function removeSub(id){
-  if(appMode !== "admin") return;
-  if(!confirm(`ต้องการลบตู้ ${id} ออกจากระบบโปรแกรมจำลองตัวนี้ใช่ไหม?`)) return;
-  subs = subs.filter(s=>s.id!==id);
-  persist(); renderCategorizedSubGrid(); renderSubList(); populateDropdowns();
-  toast('ลบตู้ควบคุมออกจากโครงสร้างหลักแล้ว');
+function deleteSub(id) {
+  if(confirm(`คุณแน่ใจว่าต้องการลบตู้ ${id} หรือไม่?`)) {
+    subs = subs.filter(s => s.id !== id);
+    persist(); toast("🗑 ลบสำเร็จ");
+    renderSettings(); populateDropdowns(); renderCategorizedSubGrid();
+  }
 }
 
-// ══════════════════════════════════════════
-// TOAST & DATA UTILITIES
-// ══════════════════════════════════════════
-function toast(msg, type=''){
-  const t = document.getElementById('toast');
-  if(!t) return;
-  t.textContent = msg;
-  t.className = 'on ' + type;
-  clearTimeout(t.tm);
-  t.tm = setTimeout(()=>{ t.className=''; }, 3500);
+function exportJSON() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ subs, records }));
+  const dl = document.createElement('a');
+  dl.setAttribute("href", dataStr);
+  dl.setAttribute("download", `Substation_Backup_${new Date().toISOString().split('T')[0]}.json`);
+  dl.click();
 }
 
-function exportExcel(){
-  let exportList = [];
-  subs.forEach(s=>{ exportList = exportList.concat(calcConsumed(s.id)); });
-  exportList.sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1);
-
-  const data = exportList.map(r=>{
-    const sObj = subs.find(x=>x.id===r.subId) || {};
-    return {
-      'Substation ID': r.subId,
-      'Location / Name': sObj.name || '',
-      'Zone / Area': sObj.zone || '',
-      'Date': r.date,
-      'Time': r.time,
-      'Meter Reading (kWh)': r.kwh,
-      'Consumed (kWh)': r.consumed !== null ? r.consumed : 'First Record',
-      'Operator / Inspector': r.user,
-      'Note': r.note || ''
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Substation Log");
-  XLSX.utils.writeFile(wb, `Substation_Energy_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast("📥 ดาวน์โหลดไฟล์รายงานสำเร็จ");
-}
-
-function exportJSON(){
-  const blob = new Blob([JSON.stringify({subs:subs, records:records},null,2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `substation_backup_${Date.now()}.json`;
-  a.click();
-}
-
-function doImport(e){
+function doImport(e) {
   const file = e.target.files[0];
-  if(!file) return;
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(evt){
-    try{
+  reader.onload = function(evt) {
+    try {
       const data = JSON.parse(evt.target.result);
-      if(data.records) records = data.records.map(r=>({...r, kwh:parseFloat(r.kwh)||0}));
-      persist();
-      renderCategorizedSubGrid(); renderData(); renderStats(); updateBadge();
-      toast('📂 กู้คืนฐานข้อมูลสำเร็จ!');
-    }catch(err){ alert('ไฟล์สำรองไม่ถูกต้อง'); }
+      if(data.subs && data.records) {
+        subs = data.subs; records = data.records; persist();
+        toast("📂 นำเข้าฐานข้อมูลเรียบร้อย");
+        renderCategorizedSubGrid(); renderData(); populateDropdowns(); updateBadge();
+      } else { toast("❌ ไฟล์ JSON ผิดโครงสร้าง", "err"); }
+    } catch(err) { toast("❌ อ่านไฟล์ล้มเหลว", "err"); }
   };
   reader.readAsText(file);
 }
 
-function clearLocalOnly(){
-  if(!confirm('คุณต้องการล้างแคชข้อมูลภายในเครื่องอุปกรณ์นี้ใช่หรือไม่? (ข้อมูลในคลาวด์จะไม่สูญหาย)')) return;
-  localStorage.removeItem('records');
-  records = [];
-  persist();
-  renderCategorizedSubGrid(); renderData(); renderStats(); updateBadge();
-  toast('🗑 ล้างหน่วยความจำแคชในเครื่องเรียบร้อย');
+function clearLocalOnly() {
+  if(confirm("⚠️ ล้าง Cache หรือไม่? ข้อมูลดิบใน Google Sheets จะไม่หาย แต่บันทึกตกค้างในเครื่องจะเคลียร์ทิ้งทั้งหมด")) {
+    localStorage.clear(); subs = initialSubs; records = []; persist();
+    toast("🗑 ล้างข้อมูลแคชสำเร็จ", "warn"); location.reload();
+  }
 }
+
+// ══════════════════════════════════════════
+// DEEP LINK INITIALIZATION ENGINE
+// ══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const savedBaseUrl = localStorage.getItem('base_url');
+  if(savedBaseUrl) {
+    const input = document.getElementById('base-url-input');
+    if(input) input.value = savedBaseUrl;
+  }
+  updateSampleUrl(); populateDropdowns(); renderCategorizedSubGrid(); renderData(); updateBadge();
+  
+  // URL Param Auto-Routing (สแกนคิวอาร์แล้วจะเปิดเข้าหน้าตู้ทันที)
+  const params = new URLSearchParams(window.location.search);
+  const subParam = params.get('sub');
+  if(subParam) {
+    const target = subs.find(s => s.id === subParam.toUpperCase());
+    if(target) { goTab('entry'); selectSub(target.id); }
+  }
+  
+  loadFromServer();
+});
 </script>
 </body>
 </html>
