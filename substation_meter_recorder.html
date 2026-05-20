@@ -757,56 +757,63 @@ function renderRecentSub(sub) {
   }
 }
 
+// ภายในฟังก์ชัน saveRecord() ของฝั่ง HTML
 async function saveRecord() {
-  if(!activeSub) return;
-  const kwhInput = document.getElementById('in-kwh').value;
-  const dateInput = document.getElementById('in-date').value;
-  const timeInput = document.getElementById('in-time').value;
-  const userInput = document.getElementById('in-user').value.trim();
-  const noteInput = document.getElementById('in-note').value.trim();
+  // 1. ดึงค่าจากหน้าจอ (ปรับชื่อตัวแปร id ตามโครงสร้าง HTML ของคุณ)
+  const kwhValue = parseFloat(document.getElementById('in-kwh').value) || 0;
+  const dateVal = document.getElementById('in-date').value;
+  const timeVal = document.getElementById('in-time').value;
+  const userVal = document.getElementById('in-user').value;
+  const noteVal = document.getElementById('in-note').value;
   
-  if(!kwhInput || parseFloat(kwhInput) <= 0) { return toast("❌ กรุณากรอกค่ามิเตอร์ที่ถูกต้อง", "err"); }
-  if(!userInput) { return toast("❌ กรุณาระบุชื่อผู้บันทึก", "err"); }
-  
-  const kwh = parseFloat(kwhInput);
-  const subRecs = records.filter(r => r.subId === activeSub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
-  const baseKwh = subRecs.length > 0 ? subRecs[subRecs.length - 1].kwh : 0;
-  const used = kwh - baseKwh;
-  
-  const newRecord = {
-    id: 'REC-' + Date.now(),
-    subId: activeSub.id,
-    subName: activeSub.name,
-    zone: activeSub.zone,
-    date: dateInput,
-    time: timeInput,
-    kwh: kwh,
-    used: used,
-    user: userInput,
-    note: noteInput
+  // สมมติว่ามีฟังก์ชันคำนวณค่าไฟที่ใช้ไป (used) และมีการสร้าง ID แบบไม่ซ้ำ
+  const recordId = "REC-" + Date.now(); 
+  const usedValue = 0; // ใส่ตัวแปรที่คำนวณค่าไฟที่ใช้ไปล่าสุดของคุณแทนที่นี่
+
+  // 2. 🟢 จัดเตรียม Payload ให้ตรงกับฟอร์แมตของสคริปต์ใหม่
+  const payload = {
+    action: 'saveRecord', // ระบุ action ให้สคริปต์รู้ว่าต้องทำอะไร
+    record: {
+      id: recordId,
+      subId: activeSub,             // ตัวแปรที่เก็บรหัสตู้ปัจจุบัน เช่น 'SUB-02'
+      subName: document.getElementById('banner-name').textContent,
+      zone: 'Zone Name',            // ใส่ตัวแปรชื่อโซนของคุณ
+      date: dateVal,
+      time: timeVal,
+      kwh: kwhValue,
+      used: usedValue,
+      user: userVal,
+      note: noteVal,
+      ts: new Date().toISOString()
+    }
   };
+
+  setSyncStatus('busy', 'กำลังส่งข้อมูลเข้าแผ่นชีต...');
   
-  records.push(newRecord);
-  persist();
-  toast("✅ บันทึกข้อมูลภายในเครื่องเรียบร้อย");
-  
-  document.getElementById('in-kwh').value = '';
-  document.getElementById('in-note').value = '';
-  
-  updateMeterSummary(activeSub);
-  renderRecentSub(activeSub);
-  renderData();
-  updateBadge();
-  
-  setSyncStatus('busy', 'กำลังซิงค์ขึ้น Google Sheets...');
   try {
-    const response = await apiPost({ action: 'add', record: newRecord });
-    if(response && response.success) {
-      setSyncStatus('ok', 'ข้อมูลซิงค์สมบูรณ์');
-      loadFromServer();
-    } else { throw new Error(); }
-  } catch(e) {
-    setSyncStatus('error', 'ระบบฝากบันทึกไว้ในเครื่องออฟไลน์');
+    // 3. ยิง API ส่งข้อมูล
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      toast("✅ บันทึกข้อมูลสำเร็จ");
+      setSyncStatus('ok', 'บันทึกสำเร็จ');
+      
+      // อัปเดตข้อมูลในเครื่อง (LocalStorage) และรีเฟรชหน้าจอ...
+      // records.unshift(payload.record);
+      // persist();
+      // renderRecentSub(activeSub);
+      
+    } else {
+      throw new Error(result.error || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ');
+    }
+  } catch (e) {
+    console.error(e);
+    setSyncStatus('error', 'บันทึกไม่สำเร็จ: ' + e.message);
   }
 }
 
