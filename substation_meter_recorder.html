@@ -759,25 +759,32 @@ function renderRecentSub(sub) {
 
 // ภายในฟังก์ชัน saveRecord() ของฝั่ง HTML
 async function saveRecord() {
-  // 1. ดึงค่าจากหน้าจอ (ปรับชื่อตัวแปร id ตามโครงสร้าง HTML ของคุณ)
-  const kwhValue = parseFloat(document.getElementById('in-kwh').value) || 0;
+  const kwhInput = document.getElementById('in-kwh');
+  const saveBtn = document.getElementById('save-btn');
+  
+  const kwhValue = parseFloat(kwhInput.value) || 0;
   const dateVal = document.getElementById('in-date').value;
   const timeVal = document.getElementById('in-time').value;
   const userVal = document.getElementById('in-user').value;
   const noteVal = document.getElementById('in-note').value;
-  
-  // สมมติว่ามีฟังก์ชันคำนวณค่าไฟที่ใช้ไป (used) และมีการสร้าง ID แบบไม่ซ้ำ
-  const recordId = "REC-" + Date.now(); 
-  const usedValue = 0; // ใส่ตัวแปรที่คำนวณค่าไฟที่ใช้ไปล่าสุดของคุณแทนที่นี่
 
-  // 2. 🟢 จัดเตรียม Payload ให้ตรงกับฟอร์แมตของสคริปต์ใหม่
+  if (kwhValue <= 0) return toast("❌ กรุณากรอกค่ามิเตอร์ให้ถูกต้อง", "err");
+
+  // ดึงค่ามิเตอร์ครั้งก่อนหน้าเพื่อมาคำนวณการใช้ไฟ (used) อัตโนมัติ
+  const subRecs = records.filter(r => r.subId === activeSub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+  const prevKwh = subRecs.length > 0 ? subRecs[subRecs.length - 1].kwh : 0;
+  const usedValue = kwhValue >= prevKwh ? kwhValue - prevKwh : 0;
+
+  const recordId = "REC-" + Date.now(); 
+
+  // จัดเตรียม Payload
   const payload = {
-    action: 'saveRecord', // ระบุ action ให้สคริปต์รู้ว่าต้องทำอะไร
+    action: 'saveRecord', 
     record: {
       id: recordId,
-      subId: activeSub,             // ตัวแปรที่เก็บรหัสตู้ปัจจุบัน เช่น 'SUB-02'
-      subName: document.getElementById('banner-name').textContent,
-      zone: 'Zone Name',            // ใส่ตัวแปรชื่อโซนของคุณ
+      subId: activeSub.id,     // ใช้ activeSub.id จากระบบที่เลือกไว้
+      subName: activeSub.name, // ใช้ activeSub.name 
+      zone: activeSub.zone,    // ใช้ activeSub.zone 
       date: dateVal,
       time: timeVal,
       kwh: kwhValue,
@@ -790,8 +797,12 @@ async function saveRecord() {
 
   setSyncStatus('busy', 'กำลังส่งข้อมูลเข้าแผ่นชีต...');
   
+  // 🔒 1. ล็อกปุ่มและช่องกรอกข้อมูลระหว่างที่ระบบกำลังประมวลผล
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '⏳ กำลังบันทึก...';
+  kwhInput.disabled = true;
+
   try {
-    // 3. ยิง API ส่งข้อมูล
     const response = await fetch(apiUrl, {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -803,17 +814,27 @@ async function saveRecord() {
       toast("✅ บันทึกข้อมูลสำเร็จ");
       setSyncStatus('ok', 'บันทึกสำเร็จ');
       
-      // อัปเดตข้อมูลในเครื่อง (LocalStorage) และรีเฟรชหน้าจอ...
-      // records.unshift(payload.record);
-      // persist();
-      // renderRecentSub(activeSub);
+      // อัปเดตข้อมูลในเครื่อง (LocalStorage) 
+      records.push(payload.record);
+      persist();
       
+      // 🔙 2. เคลียร์ค่าและกลับไปหน้าหลัก (หน้าเลือก Substation)
+      kwhInput.value = '';
+      document.getElementById('preview-box').style.display = 'none';
+      closeRecordingForm(); 
+
     } else {
       throw new Error(result.error || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ');
     }
   } catch (e) {
     console.error(e);
     setSyncStatus('error', 'บันทึกไม่สำเร็จ: ' + e.message);
+    toast("❌ บันทึกไม่สำเร็จ", "err");
+  } finally {
+    // 🔓 3. ปลดล็อกปุ่มและช่องกรอกข้อมูล (ไม่ว่าจะบันทึกสำเร็จหรือพังก็ตาม)
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '✅ บันทึกข้อมูลเข้าระบบ';
+    kwhInput.disabled = false;
   }
 }
 
