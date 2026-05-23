@@ -3,21 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>⚡ Substation Logger (28 Subs Edition)</title>
+<title>⚡ Substation Logger</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#07101e;--s1:#0d1828;--s2:#121f33;--s3:#182640;--s4:#1e2f4d;
-  --accent:#00c8f0;--green:#00e07a;--orange:#ff8c42;--red:#ff3d55;--purple:#a78bfa;--yellow:#ffd60a;
-  --text:#d8eaff;--muted:#4e6a8a;--border:#1a2e48;
-  --r:12px;
+  --accent:#00c8f0;--green:#00e07a;--orange:#ff8c42;--red:#ff3d55;
+  --purple:#a78bfa;--yellow:#ffd60a;
+  --text:#d8eaff;--muted:#4e6a8a;--border:#1a2e48;--r:12px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overflow:hidden;}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
 
-/* ─── HEADER ─── */
 .hdr{flex:0 0 auto;background:linear-gradient(180deg,#0d1e38,#0a1525);border-bottom:1px solid var(--border);
   padding:11px 14px;display:flex;align-items:center;gap:10px;z-index:50;}
 .hdr-logo{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#0080b8);
@@ -32,12 +31,10 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--t
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .hdr-badge{background:rgba(0,200,240,.1);border:1px solid rgba(0,200,240,.25);
   color:var(--accent);font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.btn-admin{background:rgba(255,214,10,.1);border:1px solid rgba(255,214,10,.3);color:var(--yellow);
+  font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;}
+.btn-admin.on{background:rgba(255,61,85,.15);border-color:var(--red);color:var(--red);}
 
-/* ─── ADMIN TOGGLE BUTTON ─── */
-.btn-toggle-admin{background:rgba(255,214,10,0.1);border:1px solid rgba(255,214,10,0.3);color:var(--yellow);font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
-.btn-toggle-admin.is-admin{background:rgba(255,61,85,0.15);border:1px solid var(--red);color:var(--red);}
-
-/* ─── SYNC BANNER ─── */
 .sync-banner{flex:0 0 auto;display:none;align-items:center;gap:8px;
   padding:8px 14px;font-size:11px;font-weight:600;border-bottom:1px solid var(--border);}
 .sync-banner.show{display:flex;}
@@ -45,40 +42,35 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--t
 .sync-banner.error{background:rgba(255,61,85,.07);color:var(--red);}
 .sync-banner.success{background:rgba(0,224,122,.07);color:var(--green);}
 
-/* ─── TABS ─── */
 .tabs{flex:0 0 auto;display:flex;background:var(--s1);border-bottom:1px solid var(--border);}
 .tab{flex:1;padding:9px 4px 8px;text-align:center;font-size:9.5px;font-weight:700;
   color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
 .tab i{display:block;font-size:16px;margin-bottom:2px;font-style:normal;}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
-/* ─── BODY ─── */
 .body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .panel{display:none;padding:14px 13px 90px;}
 .panel.active{display:block;}
 
-/* ─── CARDS & ZONE BLOCKS ─── */
 .card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px;}
 .card-title{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;
-  color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+  color:var(--accent);margin-bottom:12px;}
 .zone-block{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;}
-.zone-title{font-size:11px;font-weight:800;color:var(--purple);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+.zone-title{font-size:11px;font-weight:800;color:var(--purple);margin-bottom:10px;}
 
-/* ─── BUTTONS ─── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:11px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;
   cursor:pointer;transition:all .15s;width:100%;font-family:inherit;}
-.btn:active{transform:scale(.96);opacity:.9;}
+.btn:active{transform:scale(.96);}
 .btn:disabled{opacity:.45;pointer-events:none;}
 .btn-accent{background:linear-gradient(135deg,var(--accent),#0096c7);color:#000;}
-.btn-green{background:linear-gradient(135deg,var(--green),#00a857);color:#000;padding:14px 16px;font-size:15px;}
+.btn-green{background:linear-gradient(135deg,var(--green),#00a857);color:#000;padding:14px;font-size:15px;}
 .btn-red{background:var(--red);color:#fff;}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
 .btn-yellow{background:rgba(255,214,10,.15);border:1px solid rgba(255,214,10,.3);color:var(--yellow);}
 .btn-sm{padding:6px 11px;font-size:11px;width:auto;border-radius:7px;}
 .btn-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;}
 
-/* ─── FORM ─── */
 .f-row{margin-bottom:10px;}
 .f-label{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:5px;display:block;letter-spacing:.3px;text-transform:uppercase;}
 .f-input{width:100%;background:var(--s3);border:1px solid var(--border);border-radius:8px;
@@ -88,32 +80,26 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--t
 select.f-input option{background:var(--s2);}
 .f-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
-/* ─── SUB SELECTOR ─── */
 .sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .sub-card{background:var(--s3);border:2px solid var(--border);border-radius:10px;
   padding:12px 4px;cursor:pointer;text-align:center;transition:all .2s;position:relative;}
 .sub-card:active{transform:scale(.95);}
 .sub-card.sel{border-color:var(--accent);background:rgba(0,200,240,.07);}
 .sub-card .sc-id{font-size:13px;font-weight:800;color:var(--accent);}
-.sub-card .sc-name{font-size:7.5px;color:var(--muted);margin-top:2px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.sub-card .sc-dot{width:6px;height:6px;border-radius:50%;background:var(--border);
-  position:absolute;top:6px;right:6px;}
+.sub-card .sc-name{font-size:7.5px;color:var(--muted);margin-top:2px;line-height:1.2;}
+.sub-card .sc-dot{width:6px;height:6px;border-radius:50%;background:var(--border);position:absolute;top:6px;right:6px;}
 .sub-card.has-data .sc-dot{background:var(--green);box-shadow:0 0 5px var(--green);}
 
-/* ─── SELECTED BANNER ─── */
-.sub-banner{background:linear-gradient(135deg,rgba(0,200,240,.15),rgba(0,200,240,.03));
-  border:2px solid rgba(0,200,240,.4);border-radius:10px;padding:12px 14px;margin-bottom:12px;
-  display:flex;align-items:center;gap:10px;}
-.sb-icon{font-size:26px;}
+.sub-banner{background:rgba(0,200,240,.08);border:2px solid rgba(0,200,240,.3);border-radius:10px;
+  padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
 .sb-id{font-size:22px;font-weight:800;color:var(--accent);display:block;}
 .sb-name{font-size:11px;color:var(--muted);}
 
-/* ─── METER SUMMARY ─── */
 .meter-card{background:linear-gradient(135deg,var(--s2),var(--s3));border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;}
 .meter-row{display:flex;gap:10px;margin-bottom:12px;}
 .meter-box{flex:1;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
 .meter-box.hi{border-color:rgba(0,224,122,.3);background:rgba(0,224,122,.05);}
-.mb-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.mb-label{font-size:9px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
 .mb-val{font-size:20px;font-weight:800;}
 .mb-unit{font-size:9px;color:var(--muted);margin-top:2px;}
 .arrow-box{display:flex;align-items:center;justify-content:center;padding-top:16px;font-size:20px;color:var(--muted);}
@@ -121,7 +107,6 @@ select.f-input option{background:var(--s2);}
 .chip-green{background:rgba(0,224,122,.15);color:var(--green);border:1px solid rgba(0,224,122,.25);}
 .chip-orange{background:rgba(255,140,66,.15);color:var(--orange);border:1px solid rgba(255,140,66,.25);}
 
-/* ─── TABLE ─── */
 .tbl-wrap{overflow-x:auto;border-radius:8px;}
 table{width:100%;border-collapse:collapse;min-width:480px;}
 th{background:var(--s3);color:var(--accent);padding:8px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
@@ -133,14 +118,12 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .td-used{color:var(--green);font-weight:700;}
 .td-actions{display:flex;gap:4px;}
 
-/* ─── CHART ─── */
 .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
-.bar-label{font-size:10px;color:var(--muted);width:52px;text-align:right;flex-shrink:0;}
+.bar-label{font-size:10px;color:var(--muted);width:65px;text-align:right;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .bar-track{flex:1;background:var(--s3);border-radius:4px;height:18px;overflow:hidden;}
 .bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:4px;transition:width .5s;}
 .bar-val{font-size:10px;color:var(--green);width:64px;flex-shrink:0;font-weight:700;}
 
-/* ─── QR PAGE ─── */
 .qr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 .qr-item{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
 .qi-id{font-size:13px;font-weight:800;color:var(--accent);margin-bottom:2px;}
@@ -148,38 +131,33 @@ tr:hover td{background:rgba(255,255,255,.018);}
 .qi-qr{display:inline-block;background:#fff;padding:7px;border-radius:6px;margin-bottom:6px;}
 .qi-url{font-size:8px;color:var(--muted);word-break:break-all;line-height:1.4;}
 
-/* ─── INFO BOX ─── */
 .info-box{background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.2);border-radius:9px;
   padding:11px 13px;margin-bottom:12px;font-size:11px;color:var(--muted);line-height:1.7;}
 .info-box strong{color:var(--purple);}
-.info-box code{background:var(--s3);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:10px;}
 .warn-box{background:rgba(255,140,66,.07);border:1px solid rgba(255,140,66,.2);border-radius:9px;
   padding:11px 13px;margin-bottom:12px;font-size:11px;color:var(--orange);line-height:1.7;}
 
-/* ─── STATS ─── */
 .stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
 .stat{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
 .stat-val{font-size:22px;font-weight:800;color:var(--accent);}
-.stat-lbl{font-size:9px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.3px;}
+.stat-lbl{font-size:9px;color:var(--muted);margin-top:2px;text-transform:uppercase;}
 
-/* ─── MODAL ─── */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;
   display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
 .modal-bg.open{display:flex;}
 .modal{background:var(--s1);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;
   width:100%;max-width:500px;max-height:92vh;overflow-y:auto;padding:18px 16px 36px;}
 .modal-head{font-size:15px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
-.modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:2px 6px;}
+.modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;}
 
-/* ─── TOAST ─── */
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
   background:var(--green);color:#000;padding:9px 18px;border-radius:30px;
-  font-size:12px;font-weight:700;opacity:0;transition:opacity .25s;z-index:999;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center;}
+  font-size:12px;font-weight:700;opacity:0;transition:opacity .25s;z-index:999;
+  white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center;}
 #toast.on{opacity:1;}
 #toast.err{background:var(--red);color:#fff;}
 #toast.warn{background:var(--orange);color:#000;}
 
-/* ─── EMPTY ─── */
 .empty{text-align:center;padding:28px;color:var(--muted);}
 .empty i{font-size:32px;display:block;margin-bottom:8px;font-style:normal;}
 .url-display{background:var(--s3);border:1px solid var(--border);border-radius:8px;
@@ -190,59 +168,60 @@ tr:hover td{background:rgba(255,255,255,.018);}
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="hdr">
   <div class="hdr-logo">⚡</div>
   <div>
     <h1>Substation Logger</h1>
-    <small id="hdr-small">กำลังโหลดระบบเบื้องหลัง...</small>
+    <small id="hdr-small">กำลังโหลด...</small>
   </div>
   <div class="hdr-right">
-    <button class="btn-toggle-admin" id="btn-admin-toggle" onclick="toggleAdminMode()">🔐 โหมดทั่วไป</button>
-    <div class="sync-dot" id="sync-dot" title="สถานะ sync"></div>
+    <button class="btn-admin" id="btn-admin" onclick="toggleAdmin()">🔐 ทั่วไป</button>
+    <div class="sync-dot" id="sync-dot"></div>
     <div class="hdr-badge" id="hdr-badge">0 records</div>
   </div>
 </div>
 
 <div class="sync-banner" id="sync-banner">
-  <span id="sync-banner-icon">⏳</span>
-  <span id="sync-banner-msg">กำลังโหลดข้อมูล...</span>
+  <span id="sync-icon">⏳</span>
+  <span id="sync-msg">กำลังโหลด...</span>
 </div>
 
-<div class="tabs" id="app-tabs">
+<!-- TABS -->
+<div class="tabs">
   <div class="tab active" onclick="goTab('entry')"><i>📝</i>บันทึก</div>
   <div class="tab" onclick="goTab('data')"><i>📊</i>ข้อมูล</div>
-  <div class="tab admin-only" onclick="goTab('chart')" style="display:none;"><i>📈</i>กราฟ</div>
-  <div class="tab admin-only" onclick="goTab('qrcodes')" style="display:none;"><i>🔲</i>QR Codes</div>
-  <div class="tab admin-only" onclick="goTab('settings')" style="display:none;"><i>⚙️</i>ตั้งค่า</div>
+  <div class="tab admin-tab" style="display:none;" onclick="goTab('chart')"><i>📈</i>กราฟ</div>
+  <div class="tab admin-tab" style="display:none;" onclick="goTab('qr')"><i>🔲</i>QR Codes</div>
+  <div class="tab admin-tab" style="display:none;" onclick="goTab('settings')"><i>⚙️</i>ตั้งค่า</div>
 </div>
 
 <div class="body">
 
+  <!-- ══ ENTRY ══ -->
   <div class="panel active" id="panel-entry">
-    <div class="card" id="sub-list-container-screen">
-      <div class="card-title">📍 เลือก Substation แยกตามพื้นที่หน้างาน</div>
-      
-      <div id="categorized-sub-areas"></div>
-      
-      <div class="btn-row" style="margin-top:10px;">
-        <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 Refresh ข้อมูลจาก Sheets</button>
+    <div class="card" id="sub-list-screen">
+      <div class="card-title">📍 เลือก Substation</div>
+      <div id="zone-areas"></div>
+      <div class="btn-row">
+        <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 Refresh</button>
       </div>
     </div>
-    
+
     <div id="entry-section" style="display:none;">
       <div class="btn-row" style="margin-bottom:10px;">
-        <button class="btn btn-ghost btn-sm" onclick="closeRecordingForm()" style="width:auto;">⬅️ ย้อนกลับไปเลือกตู้</button>
+        <button class="btn btn-ghost btn-sm" onclick="backToList()" style="width:auto;">⬅️ กลับ</button>
       </div>
-
       <div class="sub-banner">
-        <div class="sb-icon">🏭</div>
+        <div style="font-size:26px;">🏭</div>
         <div>
-          <small style="font-size:9px;color:var(--muted);text-transform:uppercase;">บันทึกข้อมูลหน้างานแยกเครื่องควบคุม</small>
+          <small style="font-size:9px;color:var(--muted);text-transform:uppercase;">กำลังบันทึก</small>
           <span class="sb-id" id="banner-id">—</span>
           <span class="sb-name" id="banner-name">—</span>
         </div>
       </div>
 
+      <!-- Previous reading summary -->
       <div class="meter-card" id="meter-summary" style="display:none;">
         <div class="card-title">⚡ ค่ามิเตอร์ล่าสุด</div>
         <div class="meter-row">
@@ -263,44 +242,46 @@ tr:hover td{background:rgba(255,255,255,.018);}
         </div>
       </div>
 
+      <!-- Form -->
       <div class="card">
         <div class="card-title">📝 บันทึกค่ามิเตอร์ใหม่</div>
         <div class="f-row">
           <label class="f-label">📟 ค่าที่อ่านจากมิเตอร์ (kWh สะสม)</label>
-          <input class="f-input xl" type="number" id="in-kwh" placeholder="0.00" step="0.01" inputmode="decimal" oninput="previewConsumption()">
+          <input class="f-input xl" type="number" id="in-kwh" placeholder="0.00" step="0.01" inputmode="decimal" oninput="previewUsed()">
         </div>
         <div id="preview-box" style="display:none;text-align:center;margin-bottom:12px;">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">การใช้ไฟรอบนี้</div>
           <span class="chip chip-green" id="preview-chip">—</span>
         </div>
         <div class="f-2col">
           <div class="f-row"><label class="f-label">📅 วันที่</label><input class="f-input" type="date" id="in-date"></div>
           <div class="f-row"><label class="f-label">🕐 เวลา</label><input class="f-input" type="time" id="in-time"></div>
         </div>
-        <div class="f-row"><label class="f-label">👤 ผู้บันทึก</label><input class="f-input" type="text" id="in-user" placeholder="ระบุชื่อผู้ตรวจสอบ"></div>
+        <div class="f-row"><label class="f-label">👤 ผู้บันทึก</label><input class="f-input" type="text" id="in-user" placeholder="ชื่อ-นามสกุล"></div>
         <div class="f-row"><label class="f-label">📌 หมายเหตุ</label><input class="f-input" type="text" id="in-note" placeholder="(ถ้ามี)"></div>
         <button class="btn btn-green" id="save-btn" onclick="saveRecord()">✅ บันทึกข้อมูลเข้าระบบ</button>
       </div>
 
-      <div class="card" id="sub-recent-card" style="display:none;">
-        <div class="card-title">🕒 5 รายการล่าสุดของ Sub นี้</div>
+      <!-- Recent 5 records -->
+      <div class="card" id="recent-card" style="display:none;">
+        <div class="card-title">🕒 5 รายการล่าสุด</div>
         <div class="tbl-wrap"><table>
           <thead><tr><th>วันที่</th><th>เวลา</th><th>ค่ามิเตอร์</th><th>ใช้ไป</th><th>ผู้บันทึก</th><th></th></tr></thead>
-          <tbody id="sub-recent-body"></tbody>
+          <tbody id="recent-body"></tbody>
         </table></div>
       </div>
     </div>
   </div>
 
+  <!-- ══ DATA ══ -->
   <div class="panel" id="panel-data">
-    <div class="stats-row" id="stats-boxes"></div>
+    <div class="stats-row" id="stats-row"></div>
     <div class="card">
       <div class="card-title">🔍 กรองข้อมูล</div>
       <div class="f-2col">
         <div class="f-row"><label class="f-label">Substation</label><select class="f-input" id="fl-sub"><option value="">ทั้งหมด</option></select></div>
         <div class="f-row"><label class="f-label">ผู้บันทึก</label><input class="f-input" id="fl-user" type="text" placeholder="ค้นหา..."></div>
-        <div class="f-row"><label class="f-label">วันที่ จาก</label><input class="f-input" type="date" id="fl-from"></div>
-        <div class="f-row"><label class="f-label">วันที่ ถึง</label><input class="f-input" type="date" id="fl-to"></div>
+        <div class="f-row"><label class="f-label">จาก</label><input class="f-input" type="date" id="fl-from"></div>
+        <div class="f-row"><label class="f-label">ถึง</label><input class="f-input" type="date" id="fl-to"></div>
       </div>
       <div class="btn-row">
         <button class="btn btn-accent btn-sm" onclick="applyFilter()">🔍 กรอง</button>
@@ -319,93 +300,89 @@ tr:hover td{background:rgba(255,255,255,.018);}
     </div>
   </div>
 
+  <!-- ══ CHART ══ -->
   <div class="panel" id="panel-chart">
     <div class="card">
-      <div class="card-title">📈 กราฟการใช้พลังงาน (kWh/รอบ)</div>
+      <div class="card-title">📈 กราฟการใช้ไฟ (kWh/รอบ)</div>
       <div class="f-row"><label class="f-label">เลือก Substation</label>
-        <select class="f-input" id="chart-sub-sel" onchange="renderChart()"><option value="">เลือก Sub...</option></select>
+        <select class="f-input" id="chart-sub" onchange="renderChart()"><option value="">เลือก Sub...</option></select>
       </div>
       <div id="chart-area"></div>
     </div>
     <div class="card">
-      <div class="card-title">📊 รวมทุก Sub (kWh ทั้งหมด)</div>
-      <div id="all-sub-chart"></div>
+      <div class="card-title">📊 รวมทุก Sub</div>
+      <div id="all-chart"></div>
     </div>
   </div>
 
-  <div class="panel" id="panel-qrcodes">
+  <!-- ══ QR ══ -->
+  <div class="panel" id="panel-qr">
     <div class="card">
-      <div class="card-title">🔗 URL ของแอปหน้างาน (สำคัญสำหรับการเจน QR)</div>
-      <div class="info-box">
-        กรอก URL ที่คุณใช้รันตัวแอปนี้ (เช่น ลิงก์จาก GitHub Pages) เพื่อให้ QR Code ที่ได้สามารถนำไปติดหน้าระบบควบคุม สแกนแล้วเปิดใช้งานได้ทันทีครับ
+      <div class="card-title">🔗 Base URL ของแอป</div>
+      <div class="f-row">
+        <label class="f-label">URL (GitHub Pages)</label>
+        <input class="f-input" type="url" id="base-url" oninput="saveBaseUrl()"
+          placeholder="https://ramesimct.github.io/substation-logger/substation_meter_recorder.html">
       </div>
-      <div class="f-row"><label class="f-label">Base URL</label>
-        <input class="f-input" type="url" id="base-url-input" placeholder="https://yourusername.github.io/substation-logger/" oninput="saveBaseUrl()">
-      </div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">ตัวอย่าง URL ที่ฝังใน QR:</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">ตัวอย่าง:</div>
       <div class="url-display" id="sample-url">—</div>
     </div>
     <div class="card">
-      <div class="card-title">🔲 QR Code สำหรับเอาไปพิมพ์ติดหน้าตู้ Substation</div>
+      <div class="card-title">🔲 QR Code ทุก Substation</div>
       <div class="qr-grid" id="qr-grid"></div>
     </div>
   </div>
 
+  <!-- ══ SETTINGS ══ -->
   <div class="panel" id="panel-settings">
     <div class="card">
-      <div class="card-title">☁️ เชื่อมต่อ Google Sheets (ข้อมูลกลาง)</div>
+      <div class="card-title">☁️ Google Sheets API</div>
       <div class="info-box">
-        <strong>🔒 ล็อกเชื่อมโยงถาวรเบื้องหลังโค้ดเรียบร้อยแล้ว</strong><br>
-        ทุกอุปกรณ์จะซิงค์ข้อมูลเข้า Excel แยกแผ่นงานตามตู้ Sub ของตัวเองโดยอัตโนมัติ ไม่จำเป็นต้องสลับลิงก์หน้าจอควบคุม
+        <strong>API URL ถูก lock ไว้ในโค้ดแล้ว</strong> — ทุกอุปกรณ์ sync ข้อมูลเดียวกันอัตโนมัติ
       </div>
-      <div class="f-row">
-        <label class="f-label">Google Apps Script Web App URL (🔒 Locked)</label>
-        <input class="f-input" type="url" id="api-url-input" readonly disabled style="opacity: 0.5;">
-      </div>
-      <div id="api-status-box" style="display:none;margin-bottom:10px;"></div>
+      <div id="api-status" style="display:none;margin-bottom:10px;"></div>
       <div class="btn-row">
-        <button class="btn btn-accent btn-sm" onclick="testConnection()">🔌 ทดสอบการเชื่อมต่อ</button>
+        <button class="btn btn-accent btn-sm" onclick="testConn()">🔌 ทดสอบการเชื่อมต่อ</button>
         <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 โหลดข้อมูลจาก Sheets</button>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-title">➕ เพิ่ม Substation ใหม่ด้วยตนเอง</div>
+      <div class="card-title">➕ เพิ่ม Substation</div>
       <div class="f-2col">
-        <div class="f-row"><label class="f-label">Sub ID</label><input class="f-input" type="text" id="new-id" placeholder="SUB-40"></div>
-        <div class="f-row"><label class="f-label">หน่วย</label><input class="f-input" type="text" id="new-unit" value="kWh"></div>
+        <div class="f-row"><label class="f-label">Sub ID</label><input class="f-input" id="new-id" placeholder="SUB-40"></div>
+        <div class="f-row"><label class="f-label">หน่วย</label><input class="f-input" id="new-unit" value="kWh"></div>
       </div>
-      <div class="f-row"><label class="f-label">ชื่อ / Location</label><input class="f-input" type="text" id="new-name" placeholder="ชื่อพื้นที่ควบคุม"></div>
-      <button class="btn btn-accent" onclick="addSub()">➕ เพิ่ม Substation</button>
+      <div class="f-row"><label class="f-label">ชื่อ/Location</label><input class="f-input" id="new-name" placeholder="ชื่อพื้นที่"></div>
+      <div class="f-row"><label class="f-label">Zone</label><input class="f-input" id="new-zone" placeholder="Custom"></div>
+      <button class="btn btn-accent" onclick="addSub()">➕ เพิ่ม</button>
     </div>
 
     <div class="card">
-      <div class="card-title">📋 รายการ Substation ทั้งหมด (<span id="sub-count">0</span>)</div>
+      <div class="card-title">📋 รายการ Substation (<span id="sub-count">0</span>)</div>
       <div id="sub-list"></div>
     </div>
 
     <div class="card" style="border-color:rgba(255,61,85,.15);">
-      <div class="card-title" style="color:var(--orange);">⚠️ Backup / Restore</div>
-      <div class="warn-box" style="margin-bottom:10px;">
-        ข้อมูลหลักอยู่ใน Google Sheets — ปุ่มด้านล่างสำหรับ backup เพิ่มเติม
-      </div>
+      <div class="card-title" style="color:var(--orange);">⚠️ Backup</div>
       <div class="btn-row">
         <button class="btn btn-green btn-sm" onclick="exportExcel()">📥 Export Excel</button>
         <button class="btn btn-ghost btn-sm" onclick="exportJSON()">💾 Backup JSON</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-input').click()">📂 Import JSON</button>
-        <button class="btn btn-red btn-sm" onclick="clearLocalOnly()">🗑 ล้าง Cache ในเครื่อง</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-inp').click()">📂 Import JSON</button>
+        <button class="btn btn-red btn-sm" onclick="clearCache()">🗑 ล้าง Cache</button>
       </div>
-      <input type="file" id="import-input" accept=".json" style="display:none" onchange="doImport(event)">
+      <input type="file" id="import-inp" accept=".json" style="display:none" onchange="doImport(event)">
     </div>
   </div>
 
-</div>
+</div><!-- .body -->
 
+<!-- EDIT MODAL -->
 <div class="modal-bg" id="edit-modal" onclick="closeEditIf(event)">
   <div class="modal">
     <div class="modal-head">✏️ แก้ไขรายการ<button class="modal-close" onclick="closeEdit()">✕</button></div>
-    <div class="warn-box" style="margin-bottom:14px;font-size:10px;">การแก้ไขค่ามิเตอร์จะกระทบค่า "ใช้ไป" ของรายการถัดไปด้วย</div>
-    <div class="f-row"><label class="f-label">Substation</label><select class="f-input" id="edit-sub-sel"></select></div>
+    <div class="warn-box" style="margin-bottom:14px;font-size:10px;">การแก้ไขค่ามิเตอร์จะกระทบค่า "ใช้ไป" ของรายการถัดไป</div>
+    <div class="f-row"><label class="f-label">Substation</label><select class="f-input" id="edit-sub"></select></div>
     <div class="f-row"><label class="f-label">ค่ามิเตอร์ (kWh สะสม)</label><input class="f-input xl" type="number" id="edit-kwh" step="0.01" inputmode="decimal"></div>
     <div class="f-2col">
       <div class="f-row"><label class="f-label">วันที่</label><input class="f-input" type="date" id="edit-date"></div>
@@ -414,7 +391,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
     <div class="f-row"><label class="f-label">ผู้บันทึก</label><input class="f-input" type="text" id="edit-user"></div>
     <div class="f-row"><label class="f-label">หมายเหตุ</label><input class="f-input" type="text" id="edit-note"></div>
     <div class="btn-row">
-      <button class="btn btn-green" id="edit-save-btn" onclick="saveEdit()">✅ บันทึก</button>
+      <button class="btn btn-green" onclick="saveEdit()">✅ บันทึก</button>
       <button class="btn btn-ghost" onclick="closeEdit()" style="width:auto;padding:11px 20px;">ยกเลิก</button>
     </div>
   </div>
@@ -424,755 +401,661 @@ tr:hover td{background:rgba(255,255,255,.018);}
 
 <script>
 // ══════════════════════════════════════════
-// STATE & PRE-DEFINED 28 SUBSTATIONS WITH ZONES
+// CONFIG — ใส่ URL ของ Apps Script Web App ที่นี่
 // ══════════════════════════════════════════
-const initialSubs = [
-  // 2-5 UA Shop
-  {id:'SUB-02', name:'NO.2', zone:'2-5 UA Shop', unit:'kWh'},
-  {id:'SUB-03', name:'NO.3', zone:'2-5 UA Shop', unit:'kWh'},
-  {id:'SUB-04', name:'NO.4', zone:'2-5 UA Shop', unit:'kWh'},
-  {id:'SUB-05', name:'NO.5', zone:'2-5 UA Shop', unit:'kWh'},
-  // 6-12 Power Zone
-  {id:'SUB-06', name:'NO.6', zone:'6-12 Power Zone', unit:'kWh'},
-  {id:'SUB-07', name:'NO.7', zone:'6-12 Power Zone', unit:'kWh'},
-  {id:'SUB-08', name:'NO.8', zone:'6-12 Power Zone', unit:'kWh'},
-  {id:'SUB-09', name:'NO.9', zone:'6-12 Power Zone', unit:'kWh'},
-  {id:'SUB-10', name:'NO.10', zone:'6-12 Power Zone', unit:'kWh'},
-  {id:'SUB-11', name:'NO.11', zone:'6-12 Power Zone', unit:'kWh'},
-  {id:'SUB-12', name:'NO.12', zone:'6-12 Power Zone', unit:'kWh'},
-  // 15,18,19,20,24,27,28,29,30 Body Shop
-  {id:'SUB-15', name:'NO.15', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-18', name:'NO.18', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-19', name:'NO.19', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-20', name:'NO.20', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-24', name:'NO.24', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-27', name:'NO.27', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-28', name:'NO.28', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-29', name:'NO.29', zone:'Body Shop', unit:'kWh'},
-  {id:'SUB-30', name:'NO.30', zone:'Body Shop', unit:'kWh'},
-  // 21,22 La Shop
-  {id:'SUB-21', name:'NO.21', zone:'21,22 La Shop', unit:'kWh'},
-  {id:'SUB-22', name:'NO.22', zone:'21,22 La Shop', unit:'kWh'},
-  // 31 Head Office
-  {id:'SUB-31', name:'NO.31', zone:'31 Head office', unit:'kWh'},
-  // 33/35,34,36,37 Frame Shop
-  {id:'SUB-33', name:'NO.33/35', zone:'Frame Shop', unit:'kWh'},
-  {id:'SUB-34', name:'NO.34', zone:'Frame Shop', unit:'kWh'},
-  {id:'SUB-36', name:'NO.36', zone:'Frame Shop', unit:'kWh'},
-  {id:'SUB-37', name:'NO.37', zone:'Frame Shop', unit:'kWh'},
-  // 38 Paint Shop
-  {id:'SUB-38', name:'NO.38', zone:'38 Paint Shop', unit:'kWh'}
+const API_URL = 'https://script.google.com/macros/s/AKfycby0Mmzq44stK8DMpAJHKGV-IsxfobL79ivOuit9Q_UtmNzBe-x49vA24L1G46x1MUyEzQ/exec';
+// ตัวอย่าง: 'https://script.google.com/macros/s/AKfyc.../exec'
+
+// ══════════════════════════════════════════
+// 28 SUBSTATIONS (initial)
+// ══════════════════════════════════════════
+const INIT_SUBS = [
+  {id:'SUB-02',name:'NO.2', zone:'2-5 UA Shop',     unit:'kWh'},
+  {id:'SUB-03',name:'NO.3', zone:'2-5 UA Shop',     unit:'kWh'},
+  {id:'SUB-04',name:'NO.4', zone:'2-5 UA Shop',     unit:'kWh'},
+  {id:'SUB-05',name:'NO.5', zone:'2-5 UA Shop',     unit:'kWh'},
+  {id:'SUB-06',name:'NO.6', zone:'6-12 Power Zone', unit:'kWh'},
+  {id:'SUB-07',name:'NO.7', zone:'6-12 Power Zone', unit:'kWh'},
+  {id:'SUB-08',name:'NO.8', zone:'6-12 Power Zone', unit:'kWh'},
+  {id:'SUB-09',name:'NO.9', zone:'6-12 Power Zone', unit:'kWh'},
+  {id:'SUB-10',name:'NO.10',zone:'6-12 Power Zone', unit:'kWh'},
+  {id:'SUB-11',name:'NO.11',zone:'6-12 Power Zone', unit:'kWh'},
+  {id:'SUB-12',name:'NO.12',zone:'6-12 Power Zone', unit:'kWh'},
+  {id:'SUB-15',name:'NO.15',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-18',name:'NO.18',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-19',name:'NO.19',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-20',name:'NO.20',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-24',name:'NO.24',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-27',name:'NO.27',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-28',name:'NO.28',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-29',name:'NO.29',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-30',name:'NO.30',zone:'Body Shop',        unit:'kWh'},
+  {id:'SUB-21',name:'NO.21',zone:'21-22 La Shop',   unit:'kWh'},
+  {id:'SUB-22',name:'NO.22',zone:'21-22 La Shop',   unit:'kWh'},
+  {id:'SUB-31',name:'NO.31',zone:'31 Head Office',  unit:'kWh'},
+  {id:'SUB-33',name:'NO.33/35',zone:'Frame Shop',   unit:'kWh'},
+  {id:'SUB-34',name:'NO.34',zone:'Frame Shop',       unit:'kWh'},
+  {id:'SUB-36',name:'NO.36',zone:'Frame Shop',       unit:'kWh'},
+  {id:'SUB-37',name:'NO.37',zone:'Frame Shop',       unit:'kWh'},
+  {id:'SUB-38',name:'NO.38',zone:'38 Paint Shop',   unit:'kWh'},
 ];
 
-const apiUrl = "https://script.google.com/macros/s/AKfycbz4lDXz-ClrrHJDvLWgO1coCSXCgH4tPf6kcHOgvl3doeqz5nssurDRDBYCZdas7Sl3Fw/exec";
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let subs    = jLoad('subs')    || INIT_SUBS;
+let records = jLoad('records') || [];
+let baseUrl = localStorage.getItem('baseUrl') || '';
+let appMode = 'basic';
+let activeSub     = null; // object {id, name, zone, unit}
+let editRecordId  = null;
 
-let subs = JSON.parse(localStorage.getItem('subs')) || initialSubs;
-let records = JSON.parse(localStorage.getItem('records')) || [];
-let appMode = "basic"; 
-let activeSub = null;
-let currentEditIndex = null;
+function jLoad(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function persist(){ localStorage.setItem('subs',JSON.stringify(subs)); localStorage.setItem('records',JSON.stringify(records)); }
 
-function persist(){
-  localStorage.setItem('subs', JSON.stringify(subs));
-  localStorage.setItem('records', JSON.stringify(records));
+// ── getLastKwh: ค่ามิเตอร์ล่าสุดของ Sub นั้น ─────────────────
+function getLastKwh(subId){
+  const sorted = records.filter(r=>r.subId===subId).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+  return sorted.length > 0 ? parseFloat(sorted[0].kwh)||0 : null;
+}
+function getSubRecs(subId){
+  return records.filter(r=>r.subId===subId).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
 }
 
 // ══════════════════════════════════════════
-// UI & NAVIGATION ENGINE
+// API
 // ══════════════════════════════════════════
-function goTab(tabId) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  
-  const panel = document.getElementById('panel-' + tabId);
-  if(panel) panel.classList.add('active');
-  
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach(t => {
-    if(t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${tabId}'`)) {
-      t.classList.add('active');
-    }
-  });
-  
-  if (tabId === 'chart') renderChart();
-  if (tabId === 'qrcodes') renderQRCodes();
-  if (tabId === 'settings') renderSettings();
-}
-
-function toggleAdminMode() {
-  const btn = document.getElementById('btn-admin-toggle');
-  if (appMode === "basic") {
-    let pwd = prompt("🔐 กรุณากรอกรหัสผ่านผู้ดูแลระบบเพื่อเปิดเมนูตั้งค่า:");
-    if (pwd === "1234") {
-      appMode = "admin";
-      btn.textContent = "🔓 โหมดแอดมิน";
-      btn.classList.add('is-admin');
-      toast("ยินดีต้อนรับเข้าสู่โหมดผู้ดูแลระบบ");
-      updateAdminVisibility();
-    } else if (pwd !== null) {
-      toast("❌ รหัสผ่านไม่ถูกต้อง!", "err");
-    }
-  } else {
-    appMode = "basic";
-    btn.textContent = "🔐 โหมดทั่วไป";
-    btn.classList.remove('is-admin');
-    toast("กลับสู่โหมดบันทึกข้อมูลทั่วไป");
-    goTab('entry');
-    updateAdminVisibility();
-  }
-}
-
-function updateAdminVisibility() {
-  document.querySelectorAll('.admin-only').forEach(tab => {
-    tab.style.display = (appMode === "admin") ? "block" : "none";
-  });
-}
-
-function updateBadge() {
-  const badge = document.getElementById('hdr-badge');
-  if(badge) badge.textContent = `${records.length} records`;
-}
-
-function toast(msg, type = "success") {
-  const el = document.getElementById('toast');
-  if(!el) return;
-  el.textContent = msg;
-  el.className = 'on';
-  if(type === 'err') el.classList.add('err');
-  if(type === 'warn') el.classList.add('warn');
-  setTimeout(() => { el.className = ''; }, 3000);
-}
-
-// ══════════════════════════════════════════
-// API CONNECTIVITY (GOOGLE SHEETS)
-// ══════════════════════════════════════════
-async function apiGet(params){
-  const url = apiUrl + '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url, {method:'GET'});
-  return res.json();
-}
-
 async function apiPost(body){
-  const res = await fetch(apiUrl, {
-    method:'POST',
-    body: JSON.stringify(body)
-  });
+  const res = await fetch(API_URL,{ method:'POST', body:JSON.stringify(body) });
+  return res.json();
+}
+async function apiGet(){
+  const res = await fetch(API_URL+'?action=getAll');
   return res.json();
 }
 
-function setSyncStatus(status, msg){
-  const dot = document.getElementById('sync-dot');
-  const banner = document.getElementById('sync-banner');
-  const icon = document.getElementById('sync-banner-icon');
-  const bmsg = document.getElementById('sync-banner-msg');
-  if(!dot || !banner) return;
-  
-  dot.className = 'sync-dot ' + (status==='ok'?'ok':status==='busy'?'busy':'err');
+function setSyncStatus(status,msg){
+  const dot=document.getElementById('sync-dot');
+  const ban=document.getElementById('sync-banner');
+  const ico=document.getElementById('sync-icon');
+  const bmsg=document.getElementById('sync-msg');
+  dot.className='sync-dot '+(status==='ok'?'ok':status==='busy'?'busy':'err');
   if(status==='busy'){
-    banner.className='sync-banner show loading';
-    icon.textContent='⏳'; bmsg.textContent=msg||'กำลัง sync...';
+    ban.className='sync-banner show loading'; ico.textContent='⏳'; bmsg.textContent=msg||'กำลัง sync...';
   } else if(status==='error'){
-    banner.className='sync-banner show error';
-    icon.textContent='❌'; bmsg.textContent=msg||'เชื่อมต่อไม่ได้';
-    setTimeout(()=>{ banner.className='sync-banner'; },5000);
+    ban.className='sync-banner show error'; ico.textContent='❌'; bmsg.textContent=msg||'เชื่อมต่อไม่ได้';
+    setTimeout(()=>{ ban.className='sync-banner'; },5000);
   } else {
-    banner.className='sync-banner show success';
-    icon.textContent='✅'; bmsg.textContent=msg||'Sync สำเร็จ';
-    setTimeout(()=>{ banner.className='sync-banner'; },2500);
+    ban.className='sync-banner show success'; ico.textContent='✅'; bmsg.textContent=msg||'Sync สำเร็จ';
+    setTimeout(()=>{ ban.className='sync-banner'; },2500);
   }
 }
 
 async function loadFromServer(){
-  setSyncStatus('busy','กำลังโหลดข้อมูลจาก Google Sheets...');
+  setSyncStatus('busy','กำลังโหลดจาก Google Sheets...');
   try{
-    const data = await apiGet({action:'getAll'});
-    if(!data || data.error) throw new Error(data?data.error:'No Response');
-    if(data.records) records = data.records.map(r=>({...r, kwh:parseFloat(r.kwh)||0, used:parseFloat(r.used)||0}));
+    const data = await apiGet();
+    if(data.error) throw new Error(data.error);
+    if(data.records && data.records.length){
+      records = data.records.map(r=>({...r, kwh:parseFloat(r.kwh)||0, used:parseFloat(r.used)||0}));
+    }
     persist();
     setSyncStatus('ok','โหลดสำเร็จ — '+records.length+' records');
-    renderCategorizedSubGrid(); renderData(); populateDropdowns(); updateBadge();
-    if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
-    document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
+    document.getElementById('hdr-small').textContent = 'เชื่อมต่อ Google Sheets ✅';
+    renderAll();
   }catch(e){
     setSyncStatus('error','โหลดไม่ได้: '+e.message);
-    document.getElementById('hdr-small').textContent='ใช้ข้อมูล Offline ภายในเครื่อง';
+    document.getElementById('hdr-small').textContent = 'ใช้ข้อมูลในเครื่อง (Offline)';
   }
 }
 
-async function testConnection(){
+async function testConn(){
   setSyncStatus('busy','กำลังทดสอบ...');
-  const box = document.getElementById('api-status-box');
-  if(!box) return;
-  box.style.display = 'block';
-  box.className = 'info-box';
-  box.innerHTML = '⚡ กำลังส่งสัญญาณทดสอบ...';
-  
+  const box = document.getElementById('api-status'); box.style.display='block';
   try{
-    const data = await apiGet({action:'getAll'});
-    if(!data || data.error) throw new Error();
+    const data = await apiGet();
+    if(data.error) throw new Error(data.error);
     setSyncStatus('ok','เชื่อมต่อสำเร็จ');
-    box.style.borderColor = 'var(--green)';
-    box.style.background = 'rgba(0, 224, 122, 0.05)';
-    box.innerHTML = `<strong style="color:var(--green);">⚡ เชื่อมต่อสำเร็จ!</strong> Cloud Database พร้อมใช้งาน`;
+    box.innerHTML='<div style="background:rgba(0,224,122,.1);border:1px solid rgba(0,224,122,.25);border-radius:8px;padding:10px;font-size:11px;color:var(--green);">✅ เชื่อมต่อสำเร็จ — '+records.length+' records ใน Sheets</div>';
   }catch(e){
-    setSyncStatus('error','เชื่อมต่อล้มเหลว');
-    box.style.borderColor = 'var(--red)';
-    box.style.background = 'rgba(255, 61, 85, 0.05)';
-    box.innerHTML = `<strong style="color:var(--red);">❌ เชื่อมต่อล้มเหลว!</strong> โปรดเช็กสัญญาณเครือข่าย`;
+    setSyncStatus('error','ล้มเหลว');
+    box.innerHTML='<div style="background:rgba(255,61,85,.1);border:1px solid rgba(255,61,85,.25);border-radius:8px;padding:10px;font-size:11px;color:var(--red);">❌ '+e.message+'</div>';
   }
 }
 
 // ══════════════════════════════════════════
-// RECORDING LOGIC (METER DATA ENTRY)
+// INIT
 // ══════════════════════════════════════════
-function renderCategorizedSubGrid() {
-  const container = document.getElementById('categorized-sub-areas');
-  if(!container) return;
-  container.innerHTML = '';
-  
-  const groups = {};
-  subs.forEach(s => {
-    if(!groups[s.zone]) groups[s.zone] = [];
-    groups[s.zone].push(s);
+function init(){
+  setNow();
+  document.getElementById('base-url').value = baseUrl;
+  updateSampleUrl();
+  renderAll();
+
+  // QR param ?sub=SUB-XX
+  const p = new URLSearchParams(location.search).get('sub');
+  if(p){
+    const found = subs.find(s=>s.id===p.toUpperCase());
+    goTab('entry');
+    setTimeout(()=>{
+      if(found){ selectSub(found.id); toast('📍 เปิด '+found.id+' จาก QR'); }
+      else toast('ไม่พบ Sub: '+p, true);
+    },200);
+  }
+
+  // Auto-load from server
+  if(API_URL && !API_URL.includes('วาง')){
+    loadFromServer();
+  } else {
+    document.getElementById('hdr-small').textContent = 'ยังไม่ได้ตั้งค่า API URL';
+  }
+}
+
+function setNow(){
+  const n=new Date();
+  document.getElementById('in-date').value=n.toISOString().split('T')[0];
+  document.getElementById('in-time').value=n.toTimeString().slice(0,5);
+}
+
+function renderAll(){
+  renderZoneAreas(); renderData(); renderStats(); populateDDs(); updateBadge();
+  if(activeSub){ updateMeterSummary(); renderRecent(); }
+}
+
+// ══════════════════════════════════════════
+// ADMIN MODE
+// ══════════════════════════════════════════
+function toggleAdmin(){
+  const btn=document.getElementById('btn-admin');
+  if(appMode==='basic'){
+    const pwd=prompt('🔐 รหัสผ่านผู้ดูแลระบบ:');
+    if(pwd==='1234'){
+      appMode='admin'; btn.textContent='🔓 แอดมิน'; btn.classList.add('on');
+      toast('เข้าสู่โหมดแอดมิน');
+    } else if(pwd!==null){ toast('รหัสผ่านไม่ถูกต้อง', true); }
+  } else {
+    appMode='basic'; btn.textContent='🔐 ทั่วไป'; btn.classList.remove('on');
+    toast('กลับโหมดทั่วไป'); goTab('entry');
+  }
+  document.querySelectorAll('.admin-tab').forEach(t=>{
+    t.style.display=appMode==='admin'?'flex':'none';
   });
-  
-  for(const zone in groups) {
-    const zoneBlock = document.createElement('div');
-    zoneBlock.className = 'zone-block';
-    zoneBlock.innerHTML = `<div class="zone-title">🏢 ${zone}</div>`;
-    
-    const grid = document.createElement('div');
-    grid.className = 'sub-grid';
-    
-    groups[zone].forEach(s => {
-      const hasData = records.some(r => r.subId === s.id);
-      const selClass = (activeSub && activeSub.id === s.id) ? 'sel' : '';
-      const dataClass = hasData ? 'has-data' : '';
-      
-      grid.innerHTML += `
-        <div class="sub-card ${dataClass} ${selClass}" onclick="selectSub('${s.id}')">
-          <div class="sc-dot"></div>
-          <div class="sc-id">${s.id}</div>
-          <div class="sc-name">${s.name}</div>
-        </div>
-      `;
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+const TAB_ORDER=['entry','data','chart','qr','settings'];
+function goTab(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.querySelectorAll('.tab')[TAB_ORDER.indexOf(name)].classList.add('active');
+  if(name==='data')    { renderData(); renderStats(); }
+  if(name==='chart')   { populateDDs(); renderChart(); renderAllChart(); }
+  if(name==='qr')      { renderQR(); }
+  if(name==='settings'){ renderSubList(); }
+}
+
+// ══════════════════════════════════════════
+// ZONE AREAS (Sub selector)
+// ══════════════════════════════════════════
+function renderZoneAreas(){
+  const container=document.getElementById('zone-areas');
+  container.innerHTML='';
+  const groups={};
+  subs.forEach(s=>{ if(!groups[s.zone]) groups[s.zone]=[]; groups[s.zone].push(s); });
+  for(const zone in groups){
+    const block=document.createElement('div');
+    block.className='zone-block';
+    block.innerHTML='<div class="zone-title">🏢 '+zone+'</div>';
+    const grid=document.createElement('div');
+    grid.className='sub-grid';
+    groups[zone].forEach(s=>{
+      const hasData=records.some(r=>r.subId===s.id);
+      const isSel=activeSub&&activeSub.id===s.id;
+      const d=document.createElement('div');
+      d.className='sub-card'+(isSel?' sel':'')+(hasData?' has-data':'');
+      d.innerHTML='<div class="sc-dot"></div><div class="sc-id">'+s.id+'</div><div class="sc-name">'+s.name+'</div>';
+      d.onclick=()=>selectSub(s.id);
+      grid.appendChild(d);
     });
-    zoneBlock.appendChild(grid);
-    container.appendChild(zoneBlock);
+    block.appendChild(grid);
+    container.appendChild(block);
   }
 }
 
-function selectSub(subId) {
-  activeSub = subs.find(s => s.id === subId);
+function selectSub(subId){
+  activeSub=subs.find(s=>s.id===subId);
   if(!activeSub) return;
-  
-  document.getElementById('sub-list-container-screen').style.display = 'none';
-  document.getElementById('entry-section').style.display = 'block';
-  
-  document.getElementById('banner-id').textContent = activeSub.id;
-  document.getElementById('banner-name').textContent = activeSub.name + ` (${activeSub.zone})`;
-  
-  document.getElementById('in-kwh').value = '';
-  document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('in-time').value = new Date().toTimeString().slice(0, 5);
-  document.getElementById('preview-box').style.display = 'none';
-  
-  updateMeterSummary(activeSub);
-  renderRecentSub(activeSub);
-  renderCategorizedSubGrid();
+  document.getElementById('sub-list-screen').style.display='none';
+  document.getElementById('entry-section').style.display='block';
+  document.getElementById('banner-id').textContent=activeSub.id;
+  document.getElementById('banner-name').textContent=activeSub.name+' ('+activeSub.zone+')';
+  setNow();
+  document.getElementById('in-kwh').value='';
+  document.getElementById('preview-box').style.display='none';
+  updateMeterSummary();
+  renderRecent();
+  renderZoneAreas();
 }
 
-function closeRecordingForm() {
-  activeSub = null;
-  document.getElementById('sub-list-container-screen').style.display = 'block';
-  document.getElementById('entry-section').style.display = 'none';
-  renderCategorizedSubGrid();
+function backToList(){
+  activeSub=null;
+  document.getElementById('sub-list-screen').style.display='block';
+  document.getElementById('entry-section').style.display='none';
+  renderZoneAreas();
 }
 
-function updateMeterSummary(sub) {
-  const subRecs = records.filter(r => r.subId === sub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
-  const summaryCard = document.getElementById('meter-summary');
-  
-  if(subRecs.length > 0) {
-    summaryCard.style.display = 'block';
-    const lastRec = subRecs[subRecs.length - 1];
-    const prevRec = subRecs.length > 1 ? subRecs[subRecs.length - 2] : null;
-    
-    document.getElementById('last-reading').textContent = parseFloat(lastRec.kwh).toFixed(2);
-    document.getElementById('prev-reading').textContent = prevRec ? parseFloat(prevRec.kwh).toFixed(2) : '—';
-    document.getElementById('last-used').textContent = parseFloat(lastRec.used || 0).toFixed(2);
-  } else {
-    summaryCard.style.display = 'none';
-  }
-}
-
-function previewConsumption() {
+function updateMeterSummary(){
   if(!activeSub) return;
-  const inputVal = parseFloat(document.getElementById('in-kwh').value) || 0;
-  const subRecs = records.filter(r => r.subId === activeSub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
-  const previewBox = document.getElementById('preview-box');
-  const previewChip = document.getElementById('preview-chip');
-  
-  if(inputVal <= 0) {
-    previewBox.style.display = 'none';
-    return;
-  }
-  
-  const baseKwh = subRecs.length > 0 ? subRecs[subRecs.length - 1].kwh : 0;
-  const used = inputVal - baseKwh;
-  previewBox.style.display = 'block';
-  
-  if(used >= 0) {
-    previewChip.className = "chip chip-green";
-    previewChip.textContent = `⚡ ใช้เพิ่มขึ้น: +${used.toFixed(2)} kWh`;
+  const recs=getSubRecs(activeSub.id);
+  const sm=document.getElementById('meter-summary');
+  if(!recs.length){ sm.style.display='none'; return; }
+  sm.style.display='block';
+  const last=recs[recs.length-1];
+  const prev=recs.length>1?recs[recs.length-2]:null;
+  document.getElementById('last-reading').textContent=parseFloat(last.kwh).toFixed(2);
+  document.getElementById('prev-reading').textContent=prev?parseFloat(prev.kwh).toFixed(2):'—';
+  document.getElementById('last-used').textContent=parseFloat(last.used||0).toFixed(2);
+}
+
+function previewUsed(){
+  if(!activeSub) return;
+  const val=parseFloat(document.getElementById('in-kwh').value);
+  const box=document.getElementById('preview-box');
+  const chip=document.getElementById('preview-chip');
+  if(isNaN(val)||val<=0){ box.style.display='none'; return; }
+  const lastKwh=getLastKwh(activeSub.id);
+  box.style.display='block';
+  if(lastKwh===null){
+    chip.className='chip chip-green'; chip.textContent='📌 บันทึกครั้งแรกของ Sub นี้';
   } else {
-    previewChip.className = "chip chip-orange";
-    previewChip.textContent = `⚠️ ค่าน้อยกว่าครั้งก่อน: ${used.toFixed(2)} kWh`;
+    const diff=val-lastKwh;
+    if(diff>0){ chip.className='chip chip-green'; chip.textContent='⚡ ใช้ไปรอบนี้: +'+diff.toFixed(2)+' kWh'; }
+    else{ chip.className='chip chip-orange'; chip.textContent='⚠️ ค่าน้อยกว่าครั้งก่อน ('+lastKwh+')'; }
   }
 }
 
-function renderRecentSub(sub) {
-  const body = document.getElementById('sub-recent-body');
-  const card = document.getElementById('sub-recent-card');
-  if(!body) return;
-  
-  const subRecs = records.filter(r => r.subId === sub.id)
-                         .sort((a,b) => new Date(b.date+'T'+b.time) - new Date(a.date+'T'+a.time))
-                         .slice(0, 5);
-                         
-  if(subRecs.length > 0) {
-    card.style.display = 'block';
-    body.innerHTML = subRecs.map(r => `
-      <tr>
-        <td>${r.date}</td>
-        <td>${r.time}</td>
-        <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
-        <td class="td-used">${parseFloat(r.used || 0).toFixed(2)}</td>
-        <td>${r.user || '—'}</td>
-        <td><button class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="editRecordInline('${r.id}')">✏️</button></td>
-      </tr>
-    `).join('');
-  } else {
-    card.style.display = 'none';
-  }
+function renderRecent(){
+  if(!activeSub) return;
+  const recs=getSubRecs(activeSub.id).slice(-5).reverse();
+  const card=document.getElementById('recent-card');
+  const body=document.getElementById('recent-body');
+  if(!recs.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  body.innerHTML=recs.map(r=>`<tr>
+    <td>${r.date}</td><td>${r.time||'—'}</td>
+    <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
+    <td class="td-used">${parseFloat(r.used||0).toFixed(2)}</td>
+    <td>${r.user||'—'}</td>
+    <td><button class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="openEdit('${r.id}')">✏️</button></td>
+  </tr>`).join('');
 }
 
-// ภายในฟังก์ชัน saveRecord() ของฝั่ง HTML
-async function saveRecord() {
-  const kwhInput = document.getElementById('in-kwh');
-  const saveBtn = document.getElementById('save-btn');
-  
-  const kwhValue = parseFloat(kwhInput.value) || 0;
-  const dateVal = document.getElementById('in-date').value;
-  const timeVal = document.getElementById('in-time').value;
-  const userVal = document.getElementById('in-user').value;
-  const noteVal = document.getElementById('in-note').value;
+// ══════════════════════════════════════════
+// SAVE RECORD ← fixed version
+// ══════════════════════════════════════════
+async function saveRecord(){
+  if(!activeSub) return toast('เลือก Substation ก่อน', true);
+  const kwh=parseFloat(document.getElementById('in-kwh').value);
+  if(isNaN(kwh)||kwh<0) return toast('กรอกค่ามิเตอร์ด้วย', true);
+  const user=document.getElementById('in-user').value.trim();
+  if(!user) return toast('กรอกชื่อผู้บันทึกด้วย', true);
+  const date=document.getElementById('in-date').value;
+  if(!date) return toast('เลือกวันที่ด้วย', true);
 
-  if (kwhValue <= 0) return toast("❌ กรุณากรอกค่ามิเตอร์ให้ถูกต้อง", "err");
+  // Check if new value lower than last
+  const lastKwh=getLastKwh(activeSub.id);
+  if(lastKwh!==null && kwh<lastKwh){
+    if(!confirm('ค่าที่กรอก ('+kwh+') น้อยกว่าครั้งก่อน ('+lastKwh+')\nบันทึกต่อหรือไม่?')) return;
+  }
 
-  // ดึงค่ามิเตอร์ครั้งก่อนหน้าเพื่อมาคำนวณการใช้ไฟ (used) อัตโนมัติ
-  const subRecs = records.filter(r => r.subId === activeSub.id).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
-  const prevKwh = subRecs.length > 0 ? subRecs[subRecs.length - 1].kwh : 0;
-  const usedValue = kwhValue >= prevKwh ? kwhValue - prevKwh : 0;
-
-  const recordId = "REC-" + Date.now(); 
-
-  // จัดเตรียม Payload
-  const payload = {
-    action: 'saveRecord', 
-    record: {
-      id: recordId,
-      subId: activeSub.id,     // ใช้ activeSub.id จากระบบที่เลือกไว้
-      subName: activeSub.name, // ใช้ activeSub.name 
-      zone: activeSub.zone,    // ใช้ activeSub.zone 
-      date: dateVal,
-      time: timeVal,
-      kwh: kwhValue,
-      used: usedValue,
-      user: userVal,
-      note: noteVal,
-      ts: new Date().toISOString()
-    }
+  const now=new Date();
+  const used=lastKwh!==null ? kwh-lastKwh : 0;
+  const rec={
+    id:      'REC-'+now.getTime(),
+    subId:   activeSub.id,
+    subName: activeSub.name,
+    zone:    activeSub.zone,
+    date,
+    time:    document.getElementById('in-time').value,
+    kwh,
+    used,
+    user,
+    note:    document.getElementById('in-note').value||'',
+    ts:      now.toISOString(),
+    editedTs:''
   };
 
-  setSyncStatus('busy', 'กำลังส่งข้อมูลเข้าแผ่นชีต...');
-  
-  // 🔒 1. ล็อกปุ่มและช่องกรอกข้อมูลระหว่างที่ระบบกำลังประมวลผล
-  saveBtn.disabled = true;
-  saveBtn.innerHTML = '⏳ กำลังบันทึก...';
-  kwhInput.disabled = true;
+  // Save local immediately (offline-friendly)
+  records.push(rec); persist();
+  toast('✅ บันทึกแล้ว — ใช้ไป '+used.toFixed(2)+' kWh');
 
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      toast("✅ บันทึกข้อมูลสำเร็จ");
-      setSyncStatus('ok', 'บันทึกสำเร็จ');
-      
-      // อัปเดตข้อมูลในเครื่อง (LocalStorage) 
-      records.push(payload.record);
-      persist();
-      
-      // 🔙 2. เคลียร์ค่าและกลับไปหน้าหลัก (หน้าเลือก Substation)
-      kwhInput.value = '';
-      document.getElementById('preview-box').style.display = 'none';
-      closeRecordingForm(); 
+  // Reset form
+  document.getElementById('in-kwh').value='';
+  document.getElementById('in-note').value='';
+  document.getElementById('preview-box').style.display='none';
+  setNow();
+  updateMeterSummary(); renderRecent(); renderZoneAreas(); updateBadge();
 
-    } else {
-      throw new Error(result.error || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ');
-    }
-  } catch (e) {
-    console.error(e);
-    setSyncStatus('error', 'บันทึกไม่สำเร็จ: ' + e.message);
-    toast("❌ บันทึกไม่สำเร็จ", "err");
-  } finally {
-    // 🔓 3. ปลดล็อกปุ่มและช่องกรอกข้อมูล (ไม่ว่าจะบันทึกสำเร็จหรือพังก็ตาม)
-    saveBtn.disabled = false;
-    saveBtn.innerHTML = '✅ บันทึกข้อมูลเข้าระบบ';
-    kwhInput.disabled = false;
+  // Sync to Sheets
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true; btn.textContent='⏳ กำลัง sync...';
+  setSyncStatus('busy','กำลังบันทึกลง Google Sheets...');
+  try{
+    const res=await apiPost({ action:'saveRecord', record:rec });
+    if(res.success) setSyncStatus('ok','บันทึกลง Sheets แล้ว');
+    else setSyncStatus('error', res.error||'บันทึกไม่สำเร็จ');
+  }catch(e){
+    setSyncStatus('error','Offline — บันทึกเฉพาะในเครื่อง');
+  }finally{
+    btn.disabled=false; btn.textContent='✅ บันทึกข้อมูลเข้าระบบ';
   }
 }
 
 // ══════════════════════════════════════════
-// DATA LOG TABLE & FILTER SYSTEM
+// EDIT / DELETE
 // ══════════════════════════════════════════
-function renderData() {
-  const body = document.getElementById('main-body');
-  const emptyEl = document.getElementById('main-empty');
-  if(!body) return;
-  
-  const subFilter = document.getElementById('fl-sub').value;
-  const userFilter = document.getElementById('fl-user').value.toLowerCase().trim();
-  const fromFilter = document.getElementById('fl-from').value;
-  const toFilter = document.getElementById('fl-to').value;
-  
-  let filtered = [...records];
-  if(subFilter) filtered = filtered.filter(r => r.subId === subFilter);
-  if(userFilter) filtered = filtered.filter(r => r.user && r.user.toLowerCase().includes(userFilter));
-  if(fromFilter) filtered = filtered.filter(r => r.date >= fromFilter);
-  if(toFilter) filtered = filtered.filter(r => r.date <= toFilter);
-  
-  filtered.sort((a,b) => new Date(b.date+'T'+b.time) - new Date(a.date+'T'+a.time));
-  
-  if(filtered.length === 0) {
-    body.innerHTML = '';
-    emptyEl.style.display = 'block';
-  } else {
-    emptyEl.style.display = 'none';
-    body.innerHTML = filtered.map(r => `
-      <tr>
-        <td class="td-sub">${r.subId}</td>
-        <td>${r.date}</td>
-        <td>${r.time}</td>
-        <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
-        <td class="td-used">${parseFloat(r.used || 0).toFixed(2)}</td>
-        <td>${r.user || '—'}</td>
-        <td>${r.note || '—'}</td>
-        <td class="td-actions">
-          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="openEditModal('${r.id}')">✏️</button>
-        </td>
-      </tr>
-    `).join('');
-  }
-  renderStats(filtered);
-}
-
-function renderStats(filteredRecords) {
-  const container = document.getElementById('stats-boxes');
-  if(!container) return;
-  const totalUsed = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.used) || 0), 0);
-  
-  container.innerHTML = `
-    <div class="stat">
-      <div class="stat-val">${filteredRecords.length}</div>
-      <div class="stat-lbl">จำนวนบันทึก (รายการ)</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val" style="color:var(--green);">${totalUsed.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-      <div class="stat-lbl">การใช้ไฟรวม (kWh)</div>
-    </div>
-  `;
-}
-
-function populateDropdowns() {
-  const flSub = document.getElementById('fl-sub');
-  const chartSub = document.getElementById('chart-sub-sel');
-  const editSub = document.getElementById('edit-sub-sel');
-  if(!flSub) return;
-  
-  const optionsHtml = `<option value="">ทั้งหมด</option>` + subs.map(s => `<option value="${s.id}">${s.id} - ${s.name}</option>`).join('');
-  flSub.innerHTML = optionsHtml;
-  if(chartSub) chartSub.innerHTML = `<option value="">เลือก Sub...</option>` + subs.map(s => `<option value="${s.id}">${s.id}</option>`).join('');
-  if(editSub) editSub.innerHTML = subs.map(s => `<option value="${s.id}">${s.id}</option>`).join('');
-}
-
-function applyFilter() { renderData(); toast("🔍 กรองข้อมูลเสร็จสิ้น"); }
-function clearFilter() {
-  document.getElementById('fl-sub').value = '';
-  document.getElementById('fl-user').value = '';
-  document.getElementById('fl-from').value = '';
-  document.getElementById('fl-to').value = '';
-  renderData();
-  toast("✖ ล้างตัวกรองแล้ว");
-}
-
-function exportExcel() {
-  if(records.length === 0) return toast("❌ ไม่มีข้อมูลให้ทำการ Export", "err");
-  const worksheet = XLSX.utils.json_to_sheet(records);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Substation_Logs");
-  XLSX.writeFile(workbook, `Substation_Logs_${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast("📥 ดาวน์โหลดไฟล์ Excel เรียบร้อย");
-}
-
-// ══════════════════════════════════════════
-// CHART GENERATOR (PURE CSS POWER BARS)
-// ══════════════════════════════════════════
-function renderChart() {
-  const subId = document.getElementById('chart-sub-sel').value;
-  const chartArea = document.getElementById('chart-area');
-  if(!chartArea) return;
-  
-  if(!subId) {
-    chartArea.innerHTML = `<div class="empty"><i>📈</i>กรุณาเลือก Substation เพื่อดูแนวโน้ม</div>`;
-  } else {
-    const subRecs = records.filter(r => r.subId === subId).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
-    if(subRecs.length === 0) {
-      chartArea.innerHTML = `<div class="empty">ไม่มีข้อมูลของตู้นี้</div>`;
-    } else {
-      const maxUsed = Math.max(...subRecs.map(r => parseFloat(r.used) || 1), 1);
-      chartArea.innerHTML = subRecs.map(r => {
-        const pct = (Math.max(0, parseFloat(r.used) || 0) / maxUsed) * 100;
-        return `
-          <div class="bar-row">
-            <div class="bar-label">${r.date.slice(5)}</div>
-            <div class="bar-track"><div class="bar-fill" style="width: ${pct}%"></div></div>
-            <div class="bar-val">${parseFloat(r.used||0).toFixed(1)} kWh</div>
-          </div>
-        `;
-      }).join('');
-    }
-  }
-  
-  // Dashboard Summary Bars
-  const allSubChart = document.getElementById('all-sub-chart');
-  if(allSubChart) {
-    const summary = {};
-    subs.forEach(s => summary[s.id] = 0);
-    records.forEach(r => { if(summary[r.subId] !== undefined) summary[r.subId] += parseFloat(r.used) || 0; });
-    const maxAll = Math.max(...Object.values(summary), 1);
-    
-    allSubChart.innerHTML = subs.map(s => {
-      const pct = (summary[s.id] / maxAll) * 100;
-      return `
-        <div class="bar-row">
-          <div class="bar-label" style="width:65px;">${s.id}</div>
-          <div class="bar-track"><div class="bar-fill" style="width: ${pct}%"></div></div>
-          <div class="bar-val">${summary[s.id].toFixed(1)} kWh</div>
-        </div>
-      `;
-    }).join('');
-  }
-}
-
-// ══════════════════════════════════════════
-// QR CODE GENERATOR (DEEP LINKING ENGINE)
-// ══════════════════════════════════════════
-function saveBaseUrl() {
-  const url = document.getElementById('base-url-input').value.trim();
-  localStorage.setItem('base_url', url);
-  updateSampleUrl();
-  renderQRCodes();
-}
-
-function updateSampleUrl() {
-  const baseUrl = document.getElementById('base-url-input').value.trim() || window.location.href.split('?')[0];
-  document.getElementById('sample-url').textContent = baseUrl + '?sub=SUB-02';
-}
-
-function renderQRCodes() {
-  const grid = document.getElementById('qr-grid');
-  if(!grid) return;
-  grid.innerHTML = '';
-  
-  const baseUrl = document.getElementById('base-url-input').value.trim() || window.location.href.split('?')[0];
-  
-  subs.forEach(s => {
-    const item = document.createElement('div');
-    item.className = 'qr-item';
-    const fullUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + `sub=${s.id}`;
-    
-    item.innerHTML = `
-      <div class="qi-id">${s.id}</div>
-      <div class="qi-name">${s.name}<br><span style="font-size:8px;color:var(--purple);">${s.zone}</span></div>
-      <div class="qi-qr" id="qr-holder-${s.id}"></div>
-      <div class="qi-url">${fullUrl}</div>
-    `;
-    grid.appendChild(item);
-    
-    try {
-      new QRCode(document.getElementById(`qr-holder-${s.id}`), {
-        text: fullUrl, width: 110, height: 110,
-        colorDark : "#000000", colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.M
-      });
-    } catch(e){}
-  });
-}
-
-// ══════════════════════════════════════════
-// MODAL & EDIT COMPONENT
-// ══════════════════════════════════════════
-function openEditModal(recordId) {
-  const rec = records.find(r => r.id === recordId);
-  if(!rec) return;
-  
-  currentEditIndex = records.findIndex(r => r.id === recordId);
-  
-  document.getElementById('edit-sub-sel').value = rec.subId;
-  document.getElementById('edit-kwh').value = rec.kwh;
-  document.getElementById('edit-date').value = rec.date;
-  document.getElementById('edit-time').value = rec.time;
-  document.getElementById('edit-user').value = rec.user || '';
-  document.getElementById('edit-note').value = rec.note || '';
-  
+function openEdit(id){
+  const r=records.find(x=>x.id===id); if(!r) return;
+  editRecordId=id;
+  const sel=document.getElementById('edit-sub');
+  sel.innerHTML=subs.map(s=>`<option value="${s.id}" ${s.id===r.subId?'selected':''}>${s.id} — ${s.name}</option>`).join('');
+  document.getElementById('edit-kwh').value=r.kwh;
+  document.getElementById('edit-date').value=r.date;
+  document.getElementById('edit-time').value=r.time||'';
+  document.getElementById('edit-user').value=r.user;
+  document.getElementById('edit-note').value=r.note||'';
   document.getElementById('edit-modal').classList.add('open');
 }
+function closeEdit(){ document.getElementById('edit-modal').classList.remove('open'); editRecordId=null; }
+function closeEditIf(e){ if(e.target.id==='edit-modal') closeEdit(); }
 
-function editRecordInline(recordId) { openEditModal(recordId); }
-function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); currentEditIndex = null; }
-function closeEditIf(e) { if(e.target.id === 'edit-modal') closeEdit(); }
+async function saveEdit(){
+  const r=records.find(x=>x.id===editRecordId); if(!r) return;
+  const kwh=parseFloat(document.getElementById('edit-kwh').value);
+  const user=document.getElementById('edit-user').value.trim();
+  if(isNaN(kwh)||!user) return toast('กรอกให้ครบด้วย', true);
 
-async function saveEdit() {
-  if(currentEditIndex === null) return;
-  
-  const subId = document.getElementById('edit-sub-sel').value;
-  const kwh = parseFloat(document.getElementById('edit-kwh').value) || 0;
-  const date = document.getElementById('edit-date').value;
-  const time = document.getElementById('edit-time').value;
-  const user = document.getElementById('edit-user').value.trim();
-  const note = document.getElementById('edit-note').value.trim();
-  
-  if(kwh <= 0 || !user) { return toast("❌ ข้อมูลไม่ครบถ้วน", "err"); }
-  
-  records[currentEditIndex] = { ...records[currentEditIndex], subId, kwh, date, time, user, note };
-  
-  // Re-calculate Consumption Chains for safety
-  const subRecs = records.filter(r => r.subId === subId).sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
-  for(let i=0; i<subRecs.length; i++){
-    const idx = records.findIndex(r => r.id === subRecs[i].id);
-    records[idx].used = i === 0 ? 0 : subRecs[i].kwh - subRecs[i-1].kwh;
+  const newSubId=document.getElementById('edit-sub').value;
+  const oldSubId=r.subId;
+
+  // Update record
+  r.subId=newSubId;
+  r.kwh=kwh;
+  r.date=document.getElementById('edit-date').value;
+  r.time=document.getElementById('edit-time').value;
+  r.user=user;
+  r.note=document.getElementById('edit-note').value||'';
+  r.editedTs=new Date().toISOString();
+
+  // Recalculate used for affected sub chain
+  [newSubId, oldSubId].filter((v,i,a)=>a.indexOf(v)===i).forEach(sid=>{
+    const chain=getSubRecs(sid);
+    chain.forEach((rec,i)=>{
+      const idx=records.findIndex(x=>x.id===rec.id);
+      records[idx].used = i===0 ? 0 : rec.kwh - chain[i-1].kwh;
+    });
+  });
+
+  persist(); closeEdit(); toast('✅ แก้ไขแล้ว');
+  renderAll();
+
+  setSyncStatus('busy','กำลังอัปเดต Sheets...');
+  try{
+    const res=await apiPost({ action:'updateRecord', record:r });
+    if(res.success) setSyncStatus('ok','อัปเดตสำเร็จ');
+    else setSyncStatus('error',res.error||'อัปเดตไม่สำเร็จ');
+  }catch(e){ setSyncStatus('error','Offline'); }
+}
+
+async function deleteRecord(id){
+  if(!confirm('ลบรายการนี้?')) return;
+  const subId=records.find(r=>r.id===id)?.subId;
+  records=records.filter(r=>r.id!==id);
+  // Recalculate chain
+  if(subId){
+    const chain=getSubRecs(subId);
+    chain.forEach((rec,i)=>{
+      const idx=records.findIndex(x=>x.id===rec.id);
+      if(idx>=0) records[idx].used=i===0?0:rec.kwh-chain[i-1].kwh;
+    });
   }
-  
-  persist(); closeEdit(); toast("✅ แก้ไขข้อมูลสำเร็จ");
+  persist(); toast('ลบแล้ว'); renderAll();
+  setSyncStatus('busy','กำลังลบจาก Sheets...');
+  try{
+    await apiPost({ action:'deleteRecord', id:String(id) });
+    setSyncStatus('ok','ลบสำเร็จ');
+  }catch(e){ setSyncStatus('error','Offline'); }
+}
+
+// ══════════════════════════════════════════
+// DATA TABLE
+// ══════════════════════════════════════════
+function renderData(filtered){
+  const rows=filtered!==undefined?filtered:[...records];
+  rows.sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+  const body=document.getElementById('main-body');
+  const empty=document.getElementById('main-empty');
+  body.innerHTML='';
+  if(!rows.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="td-sub">${r.subId}</td>
+      <td>${r.date}</td><td>${r.time||'—'}</td>
+      <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
+      <td class="td-used">${parseFloat(r.used||0).toFixed(2)}</td>
+      <td>${r.user||'—'}</td><td>${r.note||'—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-accent btn-sm" onclick="openEdit('${r.id}')">✏️</button>
+        <button class="btn btn-red btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
+      </div></td>`;
+    body.appendChild(tr);
+  });
+}
+
+function populateDDs(){
+  const sOpts='<option value="">ทั้งหมด</option>'+subs.map(s=>`<option value="${s.id}">${s.id} - ${s.name}</option>`).join('');
+  const cOpts='<option value="">เลือก Sub...</option>'+subs.map(s=>`<option value="${s.id}">${s.id}</option>`).join('');
+  document.getElementById('fl-sub').innerHTML=sOpts;
+  const cs=document.getElementById('chart-sub'); if(cs) cs.innerHTML=cOpts;
+}
+
+function applyFilter(){
+  const sub=document.getElementById('fl-sub').value;
+  const user=document.getElementById('fl-user').value.trim().toLowerCase();
+  const from=document.getElementById('fl-from').value;
+  const to=document.getElementById('fl-to').value;
+  renderData(records.filter(r=>{
+    if(sub&&r.subId!==sub) return false;
+    if(user&&!(r.user||'').toLowerCase().includes(user)) return false;
+    if(from&&r.date<from) return false;
+    if(to&&r.date>to) return false;
+    return true;
+  }));
+}
+function clearFilter(){
+  ['fl-sub','fl-user','fl-from','fl-to'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   renderData();
-  if(activeSub) { updateMeterSummary(activeSub); renderRecentSub(activeSub); }
-  
-  setSyncStatus('busy', 'กำลังแก้ข้อมูลบน Server...');
-  try {
-    const response = await apiPost({ action: 'edit', record: records[currentEditIndex] });
-    if(response && response.success) { setSyncStatus('ok', 'อัปเดตเซิร์ฟเวอร์เสร็จสิ้น'); loadFromServer(); }
-  } catch(e) { setSyncStatus('error', 'ระบบเซฟออฟไลน์ในบราวเซอร์แทน'); }
+}
+
+function renderStats(){
+  const total=records.length;
+  const subsDone=new Set(records.map(r=>r.subId)).size;
+  const today=new Date().toISOString().split('T')[0];
+  const todayN=records.filter(r=>r.date===today).length;
+  const totalUsed=records.reduce((a,r)=>a+(parseFloat(r.used)||0),0);
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat"><div class="stat-val">${total}</div><div class="stat-lbl">Records ทั้งหมด</div></div>
+    <div class="stat"><div class="stat-val">${subsDone}/${subs.length}</div><div class="stat-lbl">Sub ที่บันทึกแล้ว</div></div>
+    <div class="stat"><div class="stat-val">${todayN}</div><div class="stat-lbl">บันทึกวันนี้</div></div>
+    <div class="stat"><div class="stat-val" style="color:var(--green);">${Math.round(totalUsed).toLocaleString()}</div><div class="stat-lbl">รวมใช้ไฟ (kWh)</div></div>`;
+}
+function updateBadge(){ document.getElementById('hdr-badge').textContent=records.length+' records'; }
+
+// ══════════════════════════════════════════
+// CHART
+// ══════════════════════════════════════════
+function renderChart(){
+  const subId=document.getElementById('chart-sub').value;
+  const area=document.getElementById('chart-area');
+  if(!subId){ area.innerHTML='<div class="empty"><i>📈</i>เลือก Sub เพื่อดูกราฟ</div>'; return; }
+  const recs=getSubRecs(subId);
+  if(recs.length<2){ area.innerHTML='<div class="empty"><i>📊</i>ต้องมีอย่างน้อย 2 records</div>'; return; }
+  const maxVal=Math.max(...recs.map(r=>Math.max(0,parseFloat(r.used)||0)),1);
+  area.innerHTML=recs.map(r=>{
+    const pct=Math.round(Math.max(0,parseFloat(r.used)||0)/maxVal*100);
+    return `<div class="bar-row">
+      <div class="bar-label">${r.date.slice(5)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <div class="bar-val">${parseFloat(r.used||0).toFixed(1)} kWh</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAllChart(){
+  const area=document.getElementById('all-chart');
+  const summary=subs.map(s=>({
+    id:s.id,
+    total:records.filter(r=>r.subId===s.id).reduce((a,r)=>a+(parseFloat(r.used)||0),0)
+  })).filter(x=>x.total>0);
+  if(!summary.length){ area.innerHTML='<div class="empty"><i>📊</i>ยังไม่มีข้อมูล</div>'; return; }
+  const maxVal=Math.max(...summary.map(x=>x.total),1);
+  area.innerHTML=summary.map(x=>`<div class="bar-row">
+    <div class="bar-label">${x.id}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.total/maxVal*100)}%"></div></div>
+    <div class="bar-val">${Math.round(x.total).toLocaleString()} kWh</div>
+  </div>`).join('');
 }
 
 // ══════════════════════════════════════════
-// ADMIN CONTROL PANELS (SETTINGS)
+// QR CODES
 // ══════════════════════════════════════════
-function renderSettings() {
-  document.getElementById('sub-count').textContent = subs.length;
-  document.getElementById('api-url-input').value = apiUrl;
-  const list = document.getElementById('sub-list');
-  if(!list) return;
-  
-  list.innerHTML = subs.map(s => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--s3); padding:8px 12px; margin-bottom:6px; border-radius:6px; font-size:12px;">
-      <div><strong style="color:var(--accent);">${s.id}</strong> - ${s.name} <span style="color:var(--muted); font-size:10px;">(${s.zone})</span></div>
-      <button class="btn btn-red btn-sm" style="padding:2px 8px; width:auto;" onclick="deleteSub('${s.id}')">✕</button>
-    </div>
-  `).join('');
+function saveBaseUrl(){ baseUrl=document.getElementById('base-url').value.trim(); localStorage.setItem('baseUrl',baseUrl); updateSampleUrl(); }
+function updateSampleUrl(){ document.getElementById('sample-url').textContent=baseUrl?buildUrl('SUB-02'):'(กรอก URL ก่อน)'; }
+function buildUrl(subId){ return baseUrl?(baseUrl.replace(/\/$/,'')+'?sub='+encodeURIComponent(subId)):'SUB:'+subId; }
+
+function renderQR(){
+  const grid=document.getElementById('qr-grid');
+  grid.innerHTML=''; updateSampleUrl();
+  subs.forEach(sub=>{
+    const url=buildUrl(sub.id);
+    const qid='qr_'+sub.id.replace(/\W/g,'_');
+    const div=document.createElement('div');
+    div.className='qr-item';
+    div.innerHTML=`<div class="qi-id">${sub.id}</div><div class="qi-name">${sub.name}<br><span style="font-size:8px;color:var(--purple);">${sub.zone}</span></div><div class="qi-qr" id="${qid}"></div><div class="qi-url">${url.length>55?url.slice(0,52)+'…':url}</div>`;
+    grid.appendChild(div);
+    setTimeout(()=>{
+      try{ document.getElementById(qid).innerHTML=''; new QRCode(document.getElementById(qid),{text:url,width:110,height:110,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M}); }catch(e){}
+    },80);
+  });
 }
 
-function addSub() {
-  const id = document.getElementById('new-id').value.toUpperCase().trim();
-  const name = document.getElementById('new-name').value.trim();
-  const unit = document.getElementById('new-unit').value.trim() || 'kWh';
-  
-  if(!id || !name) return toast("❌ กรุณากรอก ID และชื่อตู้หน้างาน", "err");
-  if(subs.some(s => s.id === id)) return toast("❌ มีรหัส Sub ID นี้อยู่แล้ว", "err");
-  
-  subs.push({ id, name, zone: 'Custom Added', unit });
-  persist(); toast("➕ เพิ่มตู้ใหม่เรียบร้อย");
-  document.getElementById('new-id').value = '';
-  document.getElementById('new-name').value = '';
-  renderSettings(); populateDropdowns(); renderCategorizedSubGrid();
+// ══════════════════════════════════════════
+// MANAGE SUBS
+// ══════════════════════════════════════════
+function renderSubList(){
+  document.getElementById('sub-count').textContent=subs.length;
+  document.getElementById('sub-list').innerHTML=subs.map((s,i)=>{
+    const cnt=records.filter(r=>r.subId===s.id).length;
+    const totalUsed=records.filter(r=>r.subId===s.id).reduce((a,r)=>a+(parseFloat(r.used)||0),0);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--accent);">${s.id}</div>
+        <div style="font-size:10px;color:var(--muted);">${s.name} · ${s.zone} · ${cnt} records · ${Math.round(totalUsed)} kWh</div>
+      </div>
+      <button class="btn btn-red btn-sm" onclick="removeSub(${i})">🗑</button>
+    </div>`;
+  }).join('');
 }
 
-function deleteSub(id) {
-  if(confirm(`คุณแน่ใจว่าต้องการลบตู้ ${id} หรือไม่?`)) {
-    subs = subs.filter(s => s.id !== id);
-    persist(); toast("🗑 ลบสำเร็จ");
-    renderSettings(); populateDropdowns(); renderCategorizedSubGrid();
-  }
+function addSub(){
+  const id=document.getElementById('new-id').value.trim().toUpperCase();
+  const name=document.getElementById('new-name').value.trim();
+  const unit=document.getElementById('new-unit').value.trim()||'kWh';
+  const zone=document.getElementById('new-zone').value.trim()||'Custom';
+  if(!id||!name) return toast('กรอก ID และชื่อด้วย', true);
+  if(subs.find(s=>s.id===id)) return toast('ID นี้มีอยู่แล้ว', true);
+  subs.push({id,name,zone,unit}); persist();
+  document.getElementById('new-id').value=''; document.getElementById('new-name').value='';
+  renderSubList(); renderZoneAreas(); populateDDs();
+  toast('✅ เพิ่ม '+id);
 }
 
-function exportJSON() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ subs, records }));
-  const dl = document.createElement('a');
-  dl.setAttribute("href", dataStr);
-  dl.setAttribute("download", `Substation_Backup_${new Date().toISOString().split('T')[0]}.json`);
-  dl.click();
+function removeSub(i){
+  const s=subs[i];
+  if(!confirm('ลบ '+s.id+'?')) return;
+  subs.splice(i,1); persist();
+  renderSubList(); renderZoneAreas(); populateDDs();
+  toast('ลบ '+s.id);
 }
 
-function doImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    try {
-      const data = JSON.parse(evt.target.result);
-      if(data.subs && data.records) {
-        subs = data.subs; records = data.records; persist();
-        toast("📂 นำเข้าฐานข้อมูลเรียบร้อย");
-        renderCategorizedSubGrid(); renderData(); populateDropdowns(); updateBadge();
-      } else { toast("❌ ไฟล์ JSON ผิดโครงสร้าง", "err"); }
-    } catch(err) { toast("❌ อ่านไฟล์ล้มเหลว", "err"); }
+// ══════════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════════
+function exportExcel(){
+  if(!records.length) return toast('ยังไม่มีข้อมูล', true);
+  const wb=XLSX.utils.book_new();
+  const allRows=records.map(r=>({'Sub ID':r.subId,'Sub Name':r.subName||'','Zone':r.zone||'','Date':r.date,'Time':r.time||'','Meter Reading (kWh)':r.kwh,'Consumed (kWh)':r.used||0,'User':r.user,'Note':r.note||'','Recorded At':r.ts}));
+  allRows.sort((a,b)=>String(a['Recorded At']).localeCompare(String(b['Recorded At'])));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(allRows),'All Records');
+  // Per-sub sheets
+  subs.forEach(s=>{
+    const rows=records.filter(r=>r.subId===s.id).sort((a,b)=>String(a.ts).localeCompare(String(b.ts)))
+      .map(r=>({'Date':r.date,'Time':r.time||'','Meter Reading':r.kwh,'Consumed':r.used||0,'User':r.user,'Note':r.note||''}));
+    if(rows.length) XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),s.id);
+  });
+  XLSX.writeFile(wb,'Substation_Energy_'+new Date().toISOString().split('T')[0]+'.xlsx');
+  toast('📥 Export สำเร็จ');
+}
+
+function exportJSON(){
+  const d={subs,records,baseUrl,exported:new Date().toISOString()};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
+  a.download='substation_backup_'+Date.now()+'.json';
+  a.click(); toast('💾 Backup สำเร็จ');
+}
+
+function doImport(e){
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(d.subs) subs=d.subs;
+      if(d.records) records=d.records;
+      if(d.baseUrl){ baseUrl=d.baseUrl; localStorage.setItem('baseUrl',baseUrl); document.getElementById('base-url').value=baseUrl; }
+      persist(); renderAll(); toast('📂 Import สำเร็จ — '+records.length+' records');
+    }catch(err){ toast('ไฟล์ไม่ถูกต้อง', true); }
   };
-  reader.readAsText(file);
+  r.readAsText(file); e.target.value='';
 }
 
-function clearLocalOnly() {
-  if(confirm("⚠️ ล้าง Cache หรือไม่? ข้อมูลดิบใน Google Sheets จะไม่หาย แต่บันทึกตกค้างในเครื่องจะเคลียร์ทิ้งทั้งหมด")) {
-    localStorage.clear(); subs = initialSubs; records = []; persist();
-    toast("🗑 ล้างข้อมูลแคชสำเร็จ", "warn"); location.reload();
-  }
+function clearCache(){
+  if(!confirm('ล้าง Cache ในเครื่องนี้?\n(ข้อมูลใน Google Sheets ยังอยู่ครบ)')) return;
+  records=[]; subs=INIT_SUBS; persist();
+  renderAll(); toast('ล้าง Cache แล้ว — กด Refresh เพื่อโหลดจาก Sheets','warn');
 }
 
 // ══════════════════════════════════════════
-// DEEP LINK INITIALIZATION ENGINE
+// TOAST
 // ══════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
-  const savedBaseUrl = localStorage.getItem('base_url');
-  if(savedBaseUrl) {
-    const input = document.getElementById('base-url-input');
-    if(input) input.value = savedBaseUrl;
-  }
-  updateSampleUrl(); populateDropdowns(); renderCategorizedSubGrid(); renderData(); updateBadge();
-  
-  // URL Param Auto-Routing (สแกนคิวอาร์แล้วจะเปิดเข้าหน้าตู้ทันที)
-  const params = new URLSearchParams(window.location.search);
-  const subParam = params.get('sub');
-  if(subParam) {
-    const target = subs.find(s => s.id === subParam.toUpperCase());
-    if(target) { goTab('entry'); selectSub(target.id); }
-  }
-  
-  loadFromServer();
-});
+function toast(msg, isErr=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='on'+(isErr==='warn'?' warn':isErr?' err':'');
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>{ t.className=''; },3000);
+}
+
+// ══════════════════════════════════════════
+// START
+// ══════════════════════════════════════════
+init();
 </script>
 </body>
 </html>
