@@ -962,7 +962,7 @@ async function loadFromServer(){
     isConnected = true; // 🟢 ตั้งค่าว่าเชื่อมต่อสำเร็จ
     
     renderAll();; renderData();
-    populateDropdown(); updateBadge();
+    updateBadge();
     if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
     document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
     
