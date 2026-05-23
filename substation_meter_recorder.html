@@ -823,6 +823,16 @@ const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_me
 /* ══════════════════════════════════════════════════════
    THEME
 ══════════════════════════════════════════════════════ */
+// ฟังก์ชันนี้จะดึง Error มาโชว์ในกล่องที่เราสร้างไว้
+window.onerror = function (msg, url, line) {
+    const consoleBox = document.getElementById('error-console');
+    const msgBox = document.getElementById('error-message');
+    
+    consoleBox.style.display = 'block';
+    msgBox.textContent = msg + ' (ที่บรรทัด ' + line + ')';
+    return false;
+};
+   
 function initTheme() {
   const saved = localStorage.getItem('theme');
   if (saved) {
@@ -952,7 +962,7 @@ async function loadFromServer(){
     isConnected = true; // 🟢 ตั้งค่าว่าเชื่อมต่อสำเร็จ
     
     renderAll();; renderData();
-    populateDropdowns(); updateBadge();
+    populateDropdown(); updateBadge();
     if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
     document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
     
@@ -1552,5 +1562,14 @@ function toast(msg, type=''){
 ══════════════════════════════════════════════════════ */
 init();
 </script>
+   
+<div id="error-console" style="position:fixed; bottom:20px; right:20px; z-index:9999; max-width:300px; display:none;">
+    <div style="background:rgba(255,0,0,0.9); color:white; padding:15px; border-radius:8px; font-size:12px; box-shadow:0 4px 10px rgba(0,0,0,0.3);">
+        <strong>⚠️ พบข้อผิดพลาด!</strong>
+        <div id="error-message" style="margin-top:5px; word-wrap:break-word;"></div>
+        <button onclick="document.getElementById('error-console').style.display='none'" style="margin-top:10px; width:100%; border:none; background:white; color:red; cursor:pointer;">ปิด</button>
+    </div>
+</div>
+
 </body>
 </html>
