@@ -997,6 +997,34 @@ async function loadFromServer(){
   }
 }
 
+async function refreshData() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '🔄 กำลังโหลด...';
+  
+  try {
+    // สมมติว่าคุณมีฟังก์ชัน fetch สำหรับดึงข้อมูลทั้งหมด
+    // หากคุณไม่มี ให้สร้างฟังก์ชันใหม่ที่เรียกไปที่ GAS โดยใช้ action: 'getAll'
+    const res = await apiPost({ action: 'getAll' }); 
+    
+    if (res && res.records) {
+      records = res.records; // อัปเดตข้อมูลในตัวแปรหลัก
+      persist();             // บันทึกลง localStorage
+      renderData();          // แสดงผลข้อมูลใหม่บนตาราง
+      updateBadge();         // อัปเดตตัวเลขแจ้งเตือน
+      toast("✅ ดึงข้อมูลล่าสุดเรียบร้อยแล้ว", "ok");
+    } else {
+      toast("⚠️ ไม่สามารถโหลดข้อมูลใหม่ได้", "err");
+    }
+  } catch (e) {
+    console.error(e);
+    toast("❌ การเชื่อมต่อผิดพลาด", "err");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 ดึงข้อมูลใหม่';
+  }
+}
+
 async function testConn(){
   setSyncStatus('busy','กำลังทดสอบ...');
   const box = document.getElementById('api-status'); box.style.display = 'block';
