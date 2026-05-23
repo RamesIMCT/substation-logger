@@ -814,7 +814,7 @@ tr:hover td { background: var(--surface-2); }
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const API_URL  = 'https://script.google.com/macros/s/AKfycbx9Kss6PVPpDxMJ397Hq9AqHIQTvqs7AfEL9yWJaPGGFkTrXXqG4nuSSAqypT7-_3MgOw/exec';
+const API_URL  = 'https://script.google.com/macros/s/AKfycbwcbrQ-YYqvKZLfWhLjNmwrdRnNzM2oeNdyYJ5GuBVQPN2VBmRteBFjfvxpzYu6arfJEg/exec';
 
 // ── HARD-CODED QR URL — แก้ไขตรงนี้เท่านั้น ──────────────────
 // ตัวอย่าง: 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html'
@@ -923,31 +923,23 @@ function getSubRecs(subId){
    API
 ══════════════════════════════════════════════════════ */
 async function apiPost(body) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // กำหนดให้ Timeout ใน 10 วินาที
+
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors', // แนะนำหากเจอปัญหา CORS Blocking
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: controller.signal // เชื่อมต่อระบบ timeout
     });
-
-    // หากใช้ mode: 'no-cors' จะไม่สามารถอ่าน body จาก res ได้ 
-    // ถ้าคุณต้องการอ่านค่าตอบกลับ แนะนำให้เอา 'no-cors' ออก 
-    // และตรวจสอบสถานะ HTTP ก่อนทำการ .json()
-    
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
-
-    const data = await res.json();
-    return data;
-
+    clearTimeout(timeoutId);
+    return await res.json();
   } catch (e) {
     console.error("API Error:", e);
-    // ส่งค่ากลับเป็น Object ที่มี error เพื่อให้ฟังก์ชันอื่นจัดการต่อได้
-    return { success: false, error: e.message };
+    throw e; // โยน error กลับไปให้ฟังก์ชันที่เรียกใช้จัดการ
   }
 }
+   
 async function apiGet(){
   const res = await fetch(API_URL + '?action=getAll');
   return res.json();
@@ -1397,6 +1389,24 @@ async function deleteRecord(id){
 /* ══════════════════════════════════════════════════════
    DATA TABLE
 ══════════════════════════════════════════════════════ */
+function getAllRecords() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ALL_RECORDS');
+  const values = sheet.getDataRange().getValues(); // ดึงมาทั้งตารางในครั้งเดียว
+  values.shift(); // ลบ header
+  
+  return values.map(row => ({
+    id: row[0],
+    subId: row[1],
+    date: row[2],
+    time: row[3],
+    kwh: row[4],
+    used: row[5],
+    user: row[6],
+    note: row[7],
+    ts: row[8]
+  }));
+}
+   
 function renderData(filtered) {
   const rows = filtered !== undefined ? filtered : [...records];
   rows.sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
