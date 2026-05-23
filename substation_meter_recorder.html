@@ -998,7 +998,9 @@ async function loadFromServer(){
 }
 
 async function refreshData() {
-  const btn = event.target;
+   const body = document.getElementById('main-body');
+  body.innerHTML = '<tr><td colspan="8" class="text-center">กำลังโหลดข้อมูล...</td></tr>';
+  const btn = event.currentTarget;
   btn.disabled = true;
   btn.textContent = '🔄 กำลังโหลด...';
   
