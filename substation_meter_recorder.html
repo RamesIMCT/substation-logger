@@ -951,7 +951,7 @@ async function loadFromServer(){
     
     isConnected = true; // 🟢 ตั้งค่าว่าเชื่อมต่อสำเร็จ
     
-    renderCategorizedSubGrid(); renderData();
+    renderAll();; renderData();
     populateDropdowns(); updateBadge();
     if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
     document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
@@ -1319,14 +1319,20 @@ function renderData(filtered){
   body.innerHTML = '';
   if (!rows.length) { empty.style.display='block'; return; }
   empty.style.display = 'none';
+  
   rows.forEach(r=>{
+    // 🟢 โค้ดปรับแต่งการแสดงผลเวลาให้สวยงาม
+    const displayTime = r.time ? new Date(r.time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—';
+    
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="td-sub">${r.subId}</td>
-      <td>${r.date}</td><td>${r.time||'—'}</td>
+      <td>${r.date}</td>
+      <td>${displayTime}</td> 
       <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
       <td class="td-used">${parseFloat(r.used||0).toFixed(2)}</td>
-      <td>${r.user||'—'}</td><td>${r.note||'—'}</td>
+      <td>${r.user||'—'}</td>
+      <td>${r.note||'—'}</td>
       <td><div class="td-actions">
         <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
