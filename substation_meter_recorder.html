@@ -1093,9 +1093,15 @@ function selectSub(subId) {
   activeSub = subs.find(s => s.id === subId);
   if(!activeSub) return;
   
-  document.getElementById('sub-list-container-screen')?.style.setProperty('display', 'none');
-  document.getElementById('entry-section')?.style.setProperty('display', 'block');
+  // 1. สลับหน้าจอ (ตรวจสอบ ID ให้ตรงกับ HTML ของคุณ)
+  // หาก ID ใน HTML คือ 'sub-list-screen' ให้ใช้ชื่อนี้แทน 'sub-list-container-screen'
+  const listScreen = document.getElementById('sub-list-container-screen') || document.getElementById('sub-list-screen');
+  const entrySection = document.getElementById('entry-section');
   
+  if (listScreen) listScreen.style.display = 'none';
+  if (entrySection) entrySection.style.display = 'block';
+  
+  // 2. อัปเดตข้อมูลบนหน้าจอ
   document.getElementById('banner-id')&&(document.getElementById('banner-id').textContent = activeSub.id);
   document.getElementById('banner-name')&&(document.getElementById('banner-name').textContent = activeSub.name + ` (${activeSub.zone})`);
   
@@ -1104,25 +1110,26 @@ function selectSub(subId) {
   document.getElementById('in-time')&&(document.getElementById('in-time').value = new Date().toTimeString().slice(0, 5));
   document.getElementById('preview-box')?.style.setProperty('display', 'none');
   
-  // 🟢 ล็อกการกรอกข้อมูลถ้าไม่มีการเชื่อมต่อ 🟢
+  // 3. จัดการสถานะ Offline
   const warnBox = document.getElementById('offline-warning');
   const saveBtn = document.getElementById('save-btn');
   const inKwh = document.getElementById('in-kwh');
 
   if (!isConnected) {
-    if(warnBox) warnBox.style.display = 'block'; // โชว์คำเตือน
-    saveBtn.disabled = true;                     // ปิดปุ่มเซฟ
-    inKwh.disabled = true;                       // ปิดช่องกรอกตัวเลข
+    if(warnBox) warnBox.style.display = 'block';
+    saveBtn.disabled = true;
+    inKwh.disabled = true;
     saveBtn.innerHTML = '❌ ไม่สามารถบันทึกได้ (Offline)';
   } else {
-    if(warnBox) warnBox.style.display = 'none';  // ซ่อนคำเตือน
-    saveBtn.disabled = false;                    // เปิดปุ่มเซฟ
-    inKwh.disabled = false;                      // เปิดช่องกรอกตัวเลข
+    if(warnBox) warnBox.style.display = 'none';
+    saveBtn.disabled = false;
+    inKwh.disabled = false;
     saveBtn.innerHTML = '✅ บันทึกข้อมูลเข้าระบบ';
   }
 
+  // 4. สำคัญมาก: ต้องเรียกฟังก์ชันเหล่านี้เพื่อให้ UI แสดงข้อมูลล่าสุด
   updateMeterSummary(activeSub);
-  renderRecent();
+  renderRecent(); 
   renderZoneAreas();
 }
 
