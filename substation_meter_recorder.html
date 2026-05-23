@@ -1366,34 +1366,47 @@ async function deleteRecord(id){
 /* ══════════════════════════════════════════════════════
    DATA TABLE
 ══════════════════════════════════════════════════════ */
-function renderData(filtered){
-  const rows = filtered!==undefined ? filtered : [...records];
-  rows.sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
-  const body  = document.getElementById('main-body');
+function renderData(filtered) {
+  const rows = filtered !== undefined ? filtered : [...records];
+  rows.sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+  
+  const body = document.getElementById('main-body');
   const empty = document.getElementById('main-empty');
-  body.innerHTML = '';
-  if (!rows.length) { empty.style.display='block'; return; }
+  if (!body || !empty) return; 
+
+  if (!rows.length) { 
+    empty.style.display = 'block'; 
+    body.innerHTML = '';
+    return; 
+  }
   empty.style.display = 'none';
   
-  rows.forEach(r=>{
-    // 🟢 โค้ดปรับแต่งการแสดงผลเวลาให้สวยงาม
-    const displayTime = r.time ? new Date(r.time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '—';
+  // ใช้ Array.map + join เพื่อเพิ่มความเร็วในการ Render
+  body.innerHTML = rows.map(r => {
+    let displayTime = '—';
+    if (r.time) {
+      if (r.time.includes(':') && r.time.length <= 5) {
+        displayTime = r.time;
+      } else {
+        const d = new Date(r.time);
+        displayTime = !isNaN(d.getTime()) ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : r.time;
+      }
+    }
     
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
+    return `<tr>
       <td class="td-sub">${r.subId}</td>
       <td>${r.date}</td>
       <td>${displayTime}</td> 
-      <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
-      <td class="td-used">${parseFloat(r.used||0).toFixed(2)}</td>
-      <td>${r.user||'—'}</td>
-      <td>${r.note||'—'}</td>
+      <td class="td-kwh">${parseFloat(r.kwh || 0).toFixed(2)}</td>
+      <td class="td-used">${parseFloat(r.used || 0).toFixed(2)}</td>
+      <td>${r.user || '—'}</td>
+      <td>${r.note || '—'}</td>
       <td><div class="td-actions">
         <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
-      </div></td>`;
-    body.appendChild(tr);
-  });
+      </div></td>
+    </tr>`;
+  }).join('');
 }
 
 function populateDDs(){
