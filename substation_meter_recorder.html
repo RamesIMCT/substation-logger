@@ -770,7 +770,7 @@ tr:hover td { background: var(--surface-2); }
     <div class="card" style="border-color:var(--red-dim);">
       <div class="card-title" style="color:var(--orange);">⚠️ Backup & Data</div>
       <div class="btn-row">
-        <button class="btn btn-yellow btn-sm" onclick="exportExcel()">📥 Excel</button>
+        <button class="btn btn-yellow btn-sm" onclick="export()">📥 Excel</button>
         <button class="btn btn-ghost btn-sm" onclick="exportJSON()">💾 JSON</button>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-inp').click()">📂 Import</button>
         <button class="btn btn-danger btn-sm" onclick="clearCache()">🗑 ล้าง Cache</button>
@@ -924,19 +924,20 @@ function getSubRecs(subId){
 ══════════════════════════════════════════════════════ */
 async function apiPost(body) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // กำหนดให้ Timeout ใน 10 วินาที
+  const id = setTimeout(() => controller.abort(), 10000); // Timeout 10s
 
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
       body: JSON.stringify(body),
-      signal: controller.signal // เชื่อมต่อระบบ timeout
+      signal: controller.signal
     });
-    clearTimeout(timeoutId);
+    clearTimeout(id);
+    if (!res.ok) throw new Error('HTTP Error: ' + res.status);
     return await res.json();
   } catch (e) {
-    console.error("API Error:", e);
-    throw e; // โยน error กลับไปให้ฟังก์ชันที่เรียกใช้จัดการ
+    clearTimeout(id);
+    throw e;
   }
 }
    
@@ -989,33 +990,33 @@ async function loadFromServer(){
   }
 }
 
-async function refreshData() {
-   const body = document.getElementById('main-body');
-  body.innerHTML = '<tr><td colspan="8" class="text-center">กำลังโหลดข้อมูล...</td></tr>';
-  const btn = event.currentTarget;
-  btn.disabled = true;
-  btn.textContent = '🔄 กำลังโหลด...';
+async function refreshData(event) {
+  const btn = event ? event.currentTarget : document.getElementById('refresh-btn-id');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 กำลังโหลด...'; }
   
   try {
-    // สมมติว่าคุณมีฟังก์ชัน fetch สำหรับดึงข้อมูลทั้งหมด
-    // หากคุณไม่มี ให้สร้างฟังก์ชันใหม่ที่เรียกไปที่ GAS โดยใช้ action: 'getAll'
     const res = await apiPost({ action: 'getAll' }); 
     
     if (res && res.records) {
-      records = res.records; // อัปเดตข้อมูลในตัวแปรหลัก
-      persist();             // บันทึกลง localStorage
-      renderData();          // แสดงผลข้อมูลใหม่บนตาราง
-      updateBadge();         // อัปเดตตัวเลขแจ้งเตือน
+      // 🟢 จัดการข้อมูลให้สะอาดก่อนบันทึก
+      records = res.records.map(r => ({
+        ...r,
+        kwh: parseFloat(r.kwh) || 0,
+        used: parseFloat(r.used) || 0,
+        ts: r.ts || new Date().toISOString()
+      }));
+      
+      persist();
+      renderAll(); // ใช้ renderAll() เพื่ออัปเดตทุกหน้าจอพร้อมกัน
       toast("✅ ดึงข้อมูลล่าสุดเรียบร้อยแล้ว", "ok");
     } else {
-      toast("⚠️ ไม่สามารถโหลดข้อมูลใหม่ได้", "err");
+      throw new Error("ไม่มีข้อมูลส่งกลับมาจาก Server");
     }
   } catch (e) {
-    console.error(e);
-    toast("❌ การเชื่อมต่อผิดพลาด", "err");
+    console.error("Refresh Error:", e);
+    toast("❌ " + e.message, "err");
   } finally {
-    btn.disabled = false;
-    btn.textContent = '🔄 ดึงข้อมูลใหม่';
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 ดึงข้อมูลใหม่'; }
   }
 }
 
@@ -1599,26 +1600,39 @@ function removeSub(i){
 /* ══════════════════════════════════════════════════════
    EXPORT / IMPORT
 ══════════════════════════════════════════════════════ */
-function exportExcel(){
-  if (!records.length) return toast('ยังไม่มีข้อมูล','err');
-  const wb = XLSX.utils.book_new();
-  const allRows = records.map(r=>({
-    'Sub ID':r.subId,'Sub Name':r.subName||'','Zone':r.zone||'',
-    'Date':r.date,'Time':r.time||'',
-    'Meter Reading (kWh)':r.kwh,'Consumed (kWh)':r.used||0,
-    'User':r.user,'Note':r.note||'','Recorded At':r.ts
+function exportExcel() {
+  if (!records.length) return toast('ยังไม่มีข้อมูล', 'err');
+  
+  // แปลงข้อมูล records ให้เหมาะกับรูปแบบ Excel
+  const dataToExport = records.map(r => ({
+    'ID': r.id,
+    'Substation ID': r.subId,
+    'Substation Name': r.subName,
+    'Zone': r.zone,
+    'Date': r.date,
+    'Time': r.time,
+    'kWh': r.kwh,
+    'Used (kWh)': r.used,
+    'User': r.user,
+    'Note': r.note,
+    'Timestamp': r.ts
   }));
-  allRows.sort((a,b)=>String(a['Recorded At']).localeCompare(String(b['Recorded At'])));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allRows), 'All Records');
-  subs.forEach(s=>{
-    const rows = records.filter(r=>r.subId===s.id)
-      .sort((a,b)=>String(a.ts).localeCompare(String(b.ts)))
-      .map(r=>({'Date':r.date,'Time':r.time||'','Meter Reading':r.kwh,'Consumed':r.used||0,'User':r.user,'Note':r.note||''}));
-    if (rows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), s.id);
-  });
-  XLSX.writeFile(wb,'Substation_Energy_'+new Date().toISOString().split('T')[0]+'.xlsx');
-  toast('📥 Export สำเร็จ','ok');
+
+  // สร้าง WorkBook และ WorkSheet
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(dataToExport);
+  
+  // ปรับความกว้างคอลัมน์ (Optional: ถ้าอยากให้สวยขึ้น)
+  ws['!cols'] = [{wch: 20}, {wch: 15}, {wch: 15}, {wch: 15}, {wch: 12}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 15}, {wch: 20}, {wch: 20}];
+  
+  XLSX.utils.book_append_sheet(wb, ws, "MeterRecords");
+  
+  // สั่งดาวน์โหลดไฟล์
+  XLSX.writeFile(wb, "Meter_Records_Export_" + new Date().toISOString().slice(0,10) + ".xlsx");
+  
+  toast('✅ ส่งออกข้อมูลสำเร็จ', 'ok');
 }
+   
 function exportJSON(){
   const d = {subs,records,exported:new Date().toISOString()};
   const a = document.createElement('a');
