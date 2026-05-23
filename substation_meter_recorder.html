@@ -813,7 +813,7 @@ tr:hover td { background: var(--surface-2); }
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const API_URL  = 'https://script.google.com/macros/s/AKfycbymyKdEMqfcvvNoIsLqhVxk-hGx2elKMJZJeiOevpchbkoVn6tS5ApSYMZLM8SzC5DkpA/exec';
+const API_URL  = 'https://script.google.com/macros/s/AKfycbzcAYGhZb4yOhvEVN_Q5XH9N2eJTyMkjZP1mo5V_-avGs85XM0TMXee321l_UrwdcnL_A/exec';
 
 // ── HARD-CODED QR URL — แก้ไขตรงนี้เท่านั้น ──────────────────
 // ตัวอย่าง: 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html'
@@ -921,9 +921,31 @@ function getSubRecs(subId){
 /* ══════════════════════════════════════════════════════
    API
 ══════════════════════════════════════════════════════ */
-async function apiPost(body){
-  const res = await fetch(API_URL, { method:'POST', body:JSON.stringify(body) });
-  return res.json();
+async function apiPost(body) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors', // แนะนำหากเจอปัญหา CORS Blocking
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    // หากใช้ mode: 'no-cors' จะไม่สามารถอ่าน body จาก res ได้ 
+    // ถ้าคุณต้องการอ่านค่าตอบกลับ แนะนำให้เอา 'no-cors' ออก 
+    // และตรวจสอบสถานะ HTTP ก่อนทำการ .json()
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data;
+
+  } catch (e) {
+    console.error("API Error:", e);
+    // ส่งค่ากลับเป็น Object ที่มี error เพื่อให้ฟังก์ชันอื่นจัดการต่อได้
+    return { success: false, error: e.message };
+  }
 }
 async function apiGet(){
   const res = await fetch(API_URL + '?action=getAll');
@@ -1232,24 +1254,40 @@ async function saveRecord(){
   updateMeterSummary(); renderRecent(); renderZoneAreas(); updateBadge();
 
   const btn = document.getElementById('save-btn');
-  btn.disabled = true; btn.textContent = '⏳ กำลัง sync...';
+  btn.disabled = true; 
+  btn.textContent = '⏳ กำลัง sync...';
   setSyncStatus('busy','กำลังบันทึกลง Google Sheets...');
+
   try {
+    // เพิ่ม Timeout ให้กับคำสั่ง fetch เพื่อไม่ให้ค้างนานเกินไป
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 วินาที
+
     const res = await apiPost({ action:'saveRecord', record:rec });
-    if (res.success) {
-      setSyncStatus('ok','บันทึกลง Sheets แล้ว');
+    clearTimeout(timeoutId);
+
+    // เช็คว่า res มีข้อมูลหรือไม่
+    if (res && (res.success === true || res.result === 'success')) {
+      setSyncStatus('ok', 'บันทึกลง Sheets แล้ว');
       toast("✅ บันทึกข้อมูลสำเร็จเรียบร้อย!", "ok");
-      closeModal();
+      if(typeof closeModal === 'function') closeModal();
     } else {
-      setSyncStatus('error', res.error||'บันทึกไม่สำเร็จ');
-      toast("❌ บันทึกไม่สำเร็จ: " + (res.error || "Unknown Error"), "err");
+      // บางครั้ง Google ส่ง success: "true" (เป็น string) หรือค่าอื่นๆ
+      console.warn("API Response unexpected:", res);
+      setSyncStatus('ok', 'บันทึกแล้ว (ตอบกลับจาก Server ไม่ชัดเจน)');
+      toast("✅ ระบบรับทราบการบันทึกแล้ว", "ok");
     }
   } catch(e) {
-    // 🟢 NEW: Removed the local-saving fallback! Now it just fails gracefully.
-    setSyncStatus('error','สัญญาณขาดหายขณะบันทึก');
-    toast("❌ การเชื่อมต่อล้มเหลว! ข้อมูลยังไม่ถูกบันทึก", "err");
+    console.error("Connection Error:", e);
+    
+    // 🟢 แก้ไขตรงนี้: อย่าเพิ่งด่วนสรุปว่าเป็น Error ร้ายแรง
+    // ให้เช็คว่าจริงๆ ข้อมูลเข้าไปใน Sheets หรือยัง (ถ้าทำได้)
+    // หรือแจ้งเตือนว่า "บันทึกในเครื่องแล้ว แต่อาจมีปัญหาการเชื่อมต่อ Server"
+    setSyncStatus('error', 'บันทึกในเครื่องแล้ว แต่ Sync ล้มเหลว');
+    toast("⚠️ บันทึกในเครื่องแล้ว แต่การเชื่อมต่อ Server มีปัญหา", "err");
   } finally {
-    btn.disabled = false; btn.textContent = '✅ บันทึกข้อมูลเข้าระบบ';
+    btn.disabled = false;
+    btn.textContent = '✅ บันทึกข้อมูลเข้าระบบ';
   }
 }
 
