@@ -948,7 +948,7 @@ function setSyncStatus(status, msg){
 }
 
 async function loadFromServer(){
-  setSyncStatus('busy','กำลังโหลดข้อมูล...');
+  setSyncStatus('busy','กำลังโหลดข้อมูลจาก Google Sheets...');
   try{
     const data = await apiGet({action:'getAll'});
     if(!data || data.error) throw new Error(data?data.error:'No Response');
@@ -958,19 +958,19 @@ async function loadFromServer(){
 
     persist(); 
     setSyncStatus('ok','โหลดสำเร็จ — '+records.length+' records');
-    isConnected = true;
     
-    // เรียกเฉพาะฟังก์ชันที่มีอยู่จริง
-    renderAll();
-    renderData();
+    isConnected = true; // 🟢 ตั้งค่าว่าเชื่อมต่อสำเร็จ
     
+    renderAll();; renderData();
+    updateBadge();populateDDs();
     if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
-    document.getElementById('hdr-small')?.textContent='เชื่อมต่อ Google Sheets ✅'; // เติม ? ป้องกัน null
+    document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
     
   }catch(e){
     setSyncStatus('error','โหลดไม่ได้: '+e.message);
-    document.getElementById('hdr-small')?.textContent='ใช้ข้อมูล Offline ภายในเครื่อง';
-    isConnected = false;
+    document.getElementById('hdr-small').textContent='ใช้ข้อมูล Offline ภายในเครื่อง';
+    
+    isConnected = false; // 🔴 ตั้งค่าว่าเชื่อมต่อล้มเหลว (Offline)
   }
 }
 
@@ -1022,7 +1022,7 @@ function setNow(){
 }
 
 function renderAll(){
-  renderZoneAreas(); renderData(); renderStats(); populateDDs();
+  renderZoneAreas(); renderData(); renderStats(); populateDDs(); updateBadge();
   if (activeSub) { updateMeterSummary(); renderRecent(); }
 }
 
@@ -1093,16 +1093,16 @@ function selectSub(subId) {
   activeSub = subs.find(s => s.id === subId);
   if(!activeSub) return;
   
-  document.getElementById('sub-list-container-screen').style.display = 'none';
-  document.getElementById('entry-section').style.display = 'block';
+  document.getElementById('sub-list-container-screen')?.style.setProperty('display', 'none');
+  document.getElementById('entry-section')?.style.setProperty('display', 'block');
   
-  document.getElementById('banner-id').textContent = activeSub.id;
-  document.getElementById('banner-name').textContent = activeSub.name + ` (${activeSub.zone})`;
+  document.getElementById('banner-id')&&(document.getElementById('banner-id').textContent = activeSub.id);
+  document.getElementById('banner-name')&&(document.getElementById('banner-name').textContent = activeSub.name + ` (${activeSub.zone})`);
   
-  document.getElementById('in-kwh').value = '';
-  document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('in-time').value = new Date().toTimeString().slice(0, 5);
-  document.getElementById('preview-box').style.display = 'none';
+  document.getElementById('in-kwh')&&(document.getElementById('in-kwh').value = '');
+  document.getElementById('in-date')&&(document.getElementById('in-date').value = new Date().toISOString().split('T')[0]);
+  document.getElementById('in-time')&&(document.getElementById('in-time').value = new Date().toTimeString().slice(0, 5));
+  document.getElementById('preview-box')?.style.setProperty('display', 'none');
   
   // 🟢 ล็อกการกรอกข้อมูลถ้าไม่มีการเชื่อมต่อ 🟢
   const warnBox = document.getElementById('offline-warning');
@@ -1123,6 +1123,7 @@ function selectSub(subId) {
 
   updateMeterSummary(activeSub);
   renderRecentSub(activeSub);
+  renderZoneAreas();
 }
 
 function backToList(){
@@ -1203,7 +1204,7 @@ async function saveRecord(){
   const now  = new Date();
   const used = lastKwh!==null ? kwh-lastKwh : 0;
   const rec  = {
-    id:      'REC-'+now.getTime(),
+    id: 'REC-' + now.getTime() + '-' + Math.floor(Math.random() * 1000),
     subId:   activeSub.id,
     subName: activeSub.name,
     zone:    activeSub.zone,
@@ -1221,7 +1222,7 @@ async function saveRecord(){
   document.getElementById('in-note').value = '';
   document.getElementById('preview-box').style.display = 'none';
   setNow();
-  updateMeterSummary(); renderRecent(); renderZoneAreas();
+  updateMeterSummary(); renderRecent(); renderZoneAreas(); updateBadge();
 
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.textContent = '⏳ กำลัง sync...';
