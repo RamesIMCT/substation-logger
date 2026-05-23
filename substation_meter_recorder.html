@@ -890,6 +890,7 @@ let records    = jLoad('records') || [];
 let appMode    = 'basic';
 let activeSub  = null;
 let editRecordId = null;
+let isConnected = true; // ตัวแปรเช็คสถานะออนไลน์let isConnected = true; // ตัวแปรเช็คสถานะออนไลน์
 
 function jLoad(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
 function persist(){
@@ -937,20 +938,29 @@ function setSyncStatus(status, msg){
 }
 
 async function loadFromServer(){
-  setSyncStatus('busy','กำลังโหลดจาก Google Sheets...');
-  try {
-    const data = await apiGet();
-    if (data.error) throw new Error(data.error);
-    if (data.records && data.records.length) {
-      records = data.records.map(r=>({...r, kwh:parseFloat(r.kwh)||0, used:parseFloat(r.used)||0}));
-    }
-    persist();
-    setSyncStatus('ok','โหลดสำเร็จ — ' + records.length + ' records');
-    document.getElementById('hdr-small').textContent = 'เชื่อมต่อ Google Sheets ✅';
-    renderAll();
-  } catch(e) {
-    setSyncStatus('error','โหลดไม่ได้: ' + e.message);
-    document.getElementById('hdr-small').textContent = 'ใช้ข้อมูลในเครื่อง (Offline)';
+  setSyncStatus('busy','กำลังโหลดข้อมูลจาก Google Sheets...');
+  try{
+    const data = await apiGet({action:'getAll'});
+    if(!data || data.error) throw new Error(data?data.error:'No Response');
+    
+    if(data.records) records = data.records.map(r=>({...r, kwh:parseFloat(r.kwh)||0, used:parseFloat(r.used)||0}));
+    if(data.subs && data.subs.length > 0) subs = data.subs;
+
+    persist(); 
+    setSyncStatus('ok','โหลดสำเร็จ — '+records.length+' records');
+    
+    isConnected = true; // 🟢 ตั้งค่าว่าเชื่อมต่อสำเร็จ
+    
+    renderCategorizedSubGrid(); renderData();
+    populateDropdowns(); updateBadge();
+    if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
+    document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
+    
+  }catch(e){
+    setSyncStatus('error','โหลดไม่ได้: '+e.message);
+    document.getElementById('hdr-small').textContent='ใช้ข้อมูล Offline ภายในเครื่อง';
+    
+    isConnected = false; // 🔴 ตั้งค่าว่าเชื่อมต่อล้มเหลว (Offline)
   }
 }
 
@@ -1069,19 +1079,41 @@ function renderZoneAreas(){
   }
 }
 
-function selectSub(subId){
-  activeSub = subs.find(s=>s.id===subId);
-  if (!activeSub) return;
-  document.getElementById('sub-list-screen').style.display = 'none';
+function selectSub(subId) {
+  activeSub = subs.find(s => s.id === subId);
+  if(!activeSub) return;
+  
+  document.getElementById('sub-list-container-screen').style.display = 'none';
   document.getElementById('entry-section').style.display = 'block';
-  document.getElementById('banner-id').textContent   = activeSub.id;
-  document.getElementById('banner-name').textContent = activeSub.name + ' · ' + activeSub.zone;
-  setNow();
+  
+  document.getElementById('banner-id').textContent = activeSub.id;
+  document.getElementById('banner-name').textContent = activeSub.name + ` (${activeSub.zone})`;
+  
   document.getElementById('in-kwh').value = '';
+  document.getElementById('in-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('in-time').value = new Date().toTimeString().slice(0, 5);
   document.getElementById('preview-box').style.display = 'none';
-  updateMeterSummary();
-  renderRecent();
-  renderZoneAreas();
+  
+  // 🟢 ล็อกการกรอกข้อมูลถ้าไม่มีการเชื่อมต่อ 🟢
+  const warnBox = document.getElementById('offline-warning');
+  const saveBtn = document.getElementById('save-btn');
+  const inKwh = document.getElementById('in-kwh');
+
+  if (!isConnected) {
+    if(warnBox) warnBox.style.display = 'block'; // โชว์คำเตือน
+    saveBtn.disabled = true;                     // ปิดปุ่มเซฟ
+    inKwh.disabled = true;                       // ปิดช่องกรอกตัวเลข
+    saveBtn.innerHTML = '❌ ไม่สามารถบันทึกได้ (Offline)';
+  } else {
+    if(warnBox) warnBox.style.display = 'none';  // ซ่อนคำเตือน
+    saveBtn.disabled = false;                    // เปิดปุ่มเซฟ
+    inKwh.disabled = false;                      // เปิดช่องกรอกตัวเลข
+    saveBtn.innerHTML = '✅ บันทึกข้อมูลเข้าระบบ';
+  }
+
+  updateMeterSummary(activeSub);
+  renderRecentSub(activeSub);
+  renderCategorizedSubGrid();
 }
 
 function backToList(){
@@ -1187,10 +1219,18 @@ async function saveRecord(){
   setSyncStatus('busy','กำลังบันทึกลง Google Sheets...');
   try {
     const res = await apiPost({ action:'saveRecord', record:rec });
-    if (res.success) setSyncStatus('ok','บันทึกลง Sheets แล้ว');
-    else setSyncStatus('error', res.error||'บันทึกไม่สำเร็จ');
+    if (res.success) {
+      setSyncStatus('ok','บันทึกลง Sheets แล้ว');
+      toast("✅ บันทึกข้อมูลสำเร็จเรียบร้อย!", "ok");
+      closeModal();
+    } else {
+      setSyncStatus('error', res.error||'บันทึกไม่สำเร็จ');
+      toast("❌ บันทึกไม่สำเร็จ: " + (res.error || "Unknown Error"), "err");
+    }
   } catch(e) {
-    setSyncStatus('error','Offline — บันทึกเฉพาะในเครื่อง');
+    // 🟢 NEW: Removed the local-saving fallback! Now it just fails gracefully.
+    setSyncStatus('error','สัญญาณขาดหายขณะบันทึก');
+    toast("❌ การเชื่อมต่อล้มเหลว! ข้อมูลยังไม่ถูกบันทึก", "err");
   } finally {
     btn.disabled = false; btn.textContent = '✅ บันทึกข้อมูลเข้าระบบ';
   }
