@@ -532,6 +532,29 @@ tr:hover td { background: var(--surface-2); }
   font-family: var(--font-body);
 }
 .back-btn:hover { background: var(--surface-3); }
+/* บังคับให้ปุ่มในโหมด Admin ปรับขนาดได้เท่ากับปุ่มในโหมดปกติ */
+.panel .btn {
+  width: 100%;
+  margin-bottom: 8px; /* เว้นระยะห่างระหว่างปุ่ม */
+  display: inline-flex;
+}
+/* เปลี่ยน entry-section ให้เป็นกล่องลอยตัว */
+#entry-section {
+  display: none;
+  position: fixed;
+  top: 56px; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  z-index: 100;
+  padding: 16px;
+  overflow-y: auto;
+  /* เพิ่ม animation ให้ดูนุ่มนวล */
+  animation: fadeIn 0.2s ease-out;
+}
+#entry-section.active {
+  display: block;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+   
 </style>
 </head>
 <body>
@@ -1085,10 +1108,13 @@ function toggleAdmin(){
     } else if (pwd !== null) { toast('รหัสผ่านไม่ถูกต้อง', 'err'); }
   } else {
     appMode = 'basic'; btn.textContent = '🔐 ทั่วไป'; btn.classList.remove('on');
-    toast('กลับโหมดทั่วไป'); goTab('entry');
+    toast('กลับโหมดทั่วไป'); 
+    goTab('entry'); // กลับหน้าแรกเมื่อออกจากโหมด Admin
   }
-  document.querySelectorAll('.admin-tab').forEach(t=>{
-    t.style.display = appMode === 'admin' ? 'flex' : 'none';
+  
+  // อัปเดตการแสดงผล Tab
+  document.querySelectorAll('.admin-tab').forEach(t => {
+    t.style.display = appMode === 'admin' ? 'block' : 'none';
   });
 }
 
