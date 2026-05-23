@@ -963,7 +963,7 @@ async function loadFromServer(){
     
     renderAll();; renderData();
     updateBadge();populateDDs();
-    if(activeSub){ updateMeterSummary(activeSub); renderRecentSub(activeSub); }
+    if(activeSub){ updateMeterSummary(activeSub); renderRecent(); }
     document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
     
   }catch(e){
@@ -1122,7 +1122,7 @@ function selectSub(subId) {
   }
 
   updateMeterSummary(activeSub);
-  renderRecentSub(activeSub);
+  renderRecent();
   renderZoneAreas();
 }
 
