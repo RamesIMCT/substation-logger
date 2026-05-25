@@ -220,6 +220,30 @@ body {
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .tab:hover:not(.active) { color: var(--text-2); background: var(--surface-2); }
 
+/* จัดการ Card ให้รองรับ Badge แบบลอยตัว */
+#sub-list-screen .card {
+  position: relative; /* สำคัญ: ทำให้ hdr-badge ยึดตำแหน่งกับ Card นี้ */
+  padding-top: 16px;
+}
+
+/* จัดการตำแหน่งของจำนวน Rec */
+#sub-list-screen #hdr-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  /* เพิ่มสีพื้นหลังจางๆ เพื่อให้อ่านง่ายขึ้นถ้ามีข้อความอื่นอยู่ด้านหลัง */
+  background: var(--surface-3); 
+  border: 1px solid var(--border);
+}
+
+/* จัดการ Grid ให้ยืดหยุ่นในมือถือ */
+#zone-areas .sub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* ปรับคอลัมน์อัตโนมัติ */
+  gap: 8px;
+  margin-top: 10px;
+}
+   
 /* ═══════════════════════════════════════════ BODY SCROLL ═══ */
 .body { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
 .panel { display: none; padding: 16px 14px 100px; }
@@ -613,8 +637,12 @@ tr:hover td { background: var(--surface-2); }
     <!-- Sub selector -->
     <div id="sub-list-screen">
       <div class="card">
-        <div class="card-title">📍 เลือก Substation</div>
-         <div class="hdr-badge" id="hdr-badge">0 rec</div>
+        <div style="padding-right: 60px;">
+          <div class="card-title">📍 เลือก Substation</div>
+        </div>
+  
+        <div class="hdr-badge" id="hdr-badge">0 rec</div>
+        
         <div id="zone-areas"></div>
         <div class="btn-row">
           <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 Refresh</button>
