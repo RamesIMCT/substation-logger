@@ -116,7 +116,13 @@ body {
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; flex-shrink: 0;
 }
-.hdr-title { font-size: 20px; font-weight: 700; color: var(--text-1); }
+.hdr-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+  word-wrap: break-word; /* ป้องกันคำยาวล้น */
+  overflow-wrap: break-word;
+}
 .hdr-sub   { font-size: 10px; color: var(--text-3); margin-top: 1px; }
 .hdr-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
 
