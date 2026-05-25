@@ -985,18 +985,42 @@ function persist() {
   localStorage.setItem('records', JSON.stringify(records));
 }
 
-// FIX: ใช้ split('-') เพื่อหลีกเลี่ยงปัญหา timezone offset
+// FIX: รองรับทั้งรูปแบบ YYYY-MM-DD และ ISO String จาก Google Sheets
 function fmtDate(d) {
   if (!d) return '—';
+  
+  // ถ้าข้อมูลส่งมาเป็น ISO String หรือมีตัว T ติดมาด้วย (จาก Sheets API)
+  if (String(d).includes('T')) {
+    const dateObj = new Date(d);
+    if (!isNaN(dateObj.getTime())) {
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      return `${day}/${month}/${year}`; // ออกมาเป็น DD/MM/YYYY
+    }
+  }
+  
+  // Fallback สำหรับข้อมูลแบบเดิมในเครื่อง (YYYY-MM-DD)
   const p = String(d).split('-');
   if (p.length !== 3) return String(d);
-  return `${p[2]}/${p[1]}/${p[0]}`; // DD/MM/YYYY
+  return `${p[2]}/${p[1]}/${p[0]}`; // ออกมาเป็น DD/MM/YYYY
 }
 
-// FIX: r.time เก็บเป็น "HH:mm" ตรงๆ ไม่ต้องแปลงเป็น Date object
+// FIX: รองรับทั้งรูปแบบ HH:mm และ ISO String ยุคปี 1899 จาก Google Sheets
 function fmtTime(t) {
   if (!t) return '—';
-  return String(t).slice(0, 5); // "HH:mm"
+  
+  // ถ้าข้อมูลส่งมาเป็นระบบ Date/Time Object (จาก Sheets API)
+  if (String(t).includes('T')) {
+    const dateObj = new Date(t);
+    if (!isNaN(dateObj.getTime())) {
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`; // ออกมาเป็น HH:mm
+    }
+  }
+  
+  return String(t).slice(0, 5); // Fallback สำหรับ "HH:mm" ปกติ
 }
 
 function setNow() {
