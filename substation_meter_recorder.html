@@ -167,12 +167,11 @@ body {
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
 /* Badge */
-.hdr-badge {
-  background: var(--accent-dim);
-  border: 1px solid var(--accent-border);
-  color: var(--accent);
-  font-size: 10px; font-weight: 700;
-  padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+#hdr-badge {
+  position: absolute;
+  top: 16px;    /* ห่างจากขอบบนเท่ากับ padding ของ card */
+  right: 16px;  /* ห่างจากขอบขวา */
+  margin: 0;    /* ลบ margin เดิมออก */
 }
 .container {
   width: 100vw; /* ใช้ความกว้างเต็มจอวิวพอร์ต */
@@ -230,6 +229,7 @@ body {
 
 /* ═══════════════════════════════════════════ CARDS ═══ */
 .card {
+  position: relative; /* สำคัญ: เพื่อให้ Badge อ้างอิงตำแหน่งจาก Card นี้ */
   background: var(--surface-1);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -594,7 +594,7 @@ tr:hover td { background: var(--surface-2); }
     <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยน Theme">🌙</button>
     <button class="btn-admin" id="btn-admin" onclick="toggleAdmin()">🔐 ทั่วไป</button>
     <div class="sync-dot" id="sync-dot"></div>
-    <div class="hdr-badge" id="hdr-badge">0 rec</div>
+    <!--<div class="hdr-badge" id="hdr-badge">0 rec</div>-->
   </div>
 </div>
 
@@ -621,6 +621,7 @@ tr:hover td { background: var(--surface-2); }
     <div id="sub-list-screen">
       <div class="card">
         <div class="card-title">📍 เลือก Substation</div>
+         <div class="hdr-badge" id="hdr-badge">0 rec</div>
         <div id="zone-areas"></div>
         <div class="btn-row">
           <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 Refresh</button>
