@@ -117,12 +117,15 @@ body {
   font-size: 18px; flex-shrink: 0;
 }
 .hdr-title {
-  font-size: 20px;
+  /* ขนาดตัวหนังสือ: เล็กสุด 14px, ขนาดกลาง 3vw, ใหญ่สุด 20px */
+  font-size: clamp(14px, 3.5vw, 20px);
   font-weight: 700;
   color: var(--text-1);
-  word-break: break-all; /* เปลี่ยนเป็น break-all เพื่อให้ตัดคำได้เด็ดขาดกว่า */
-  overflow: hidden;      /* ป้องกันไม่ให้ล้นออกนอกกล่อง */
-  min-width: 0;          /* บังคับ Flexbox ให้หดตัวได้ */
+  
+  /* ป้องกันการล้น */
+  white-space: nowrap;      /* บังคับให้อยู่บรรทัดเดียว */
+  overflow: hidden;         /* ซ่อนส่วนที่เกิน */
+  text-overflow: ellipsis;  /* เติมจุดไข่ปลา ... เมื่อข้อความยาวเกิน */
 }
 .hdr-sub   { font-size: 10px; color: var(--text-3); margin-top: 1px; }
 .hdr-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
