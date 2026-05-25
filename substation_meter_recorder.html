@@ -1506,41 +1506,45 @@ function renderData(filtered) {
   }
   empty.style.display = 'none';
   
+  // แทนที่โค้ดเดิมในส่วนการ map ข้อมูล
   body.innerHTML = rows.map(r => {
-     // --- แก้ไขส่วนวันที่ ---
-     let shortDate = r.date;
-     if (r.date && r.date.includes('-')) {
-       const parts = r.date.split('-'); // ["2026", "05", "23"]
-       if (parts.length === 3) {
-         shortDate = `${parts[2]}/${parts[1]}`; // เอาวันที่/เดือน (23/05)
-       }
-     }
-   
-     // --- จัดการเวลา ---
-     // (ใช้โค้ดเดิมของคุณ แต่ตรวจสอบให้แน่ใจว่า displayTime แสดงผลถูกต้อง)
-     let displayTime = r.time || '—';
-     if (displayTime.length > 5) {
-        // ถ้ามี Z หรือ T หรือ ISO string ให้ตัดเหลือแค่ HH:mm
-        const d = new Date(r.time);
-        if (!isNaN(d.getTime())) {
-           displayTime = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    
+    // --- โค้ดที่ถูกต้องสำหรับการดึงวันที่มาแสดงเป็น DD/MM ---
+    let shortDate = '—';
+    if (r.date) {
+        // สมมติว่า r.date มาเป็น "2026-05-22"
+        const dateObj = new Date(r.date); 
+        if (!isNaN(dateObj.getTime())) {
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            shortDate = `${d}/${m}`; // ได้ "22/05"
+        } else {
+            // กรณีถ้า r.date ไม่ใช่ Date Object ลอง split ดู
+            const parts = r.date.split('-');
+            if(parts.length === 3) shortDate = `${parts[2]}/${parts[1]}`;
         }
-     }
-       
-     return `<tr>
-         <td class="td-sub">${r.subId}</td>
-         <td style="white-space:nowrap;">${shortDate}</td> 
-         <td style="white-space:nowrap;">${displayTime}</td> 
-         <td class="td-kwh">${parseFloat(r.kwh || 0).toFixed(2)}</td>
-         <td class="td-used"><strong>${parseFloat(r.used || 0).toFixed(2)}</strong></td>
-         <td class="desktop-only">${r.user || '—'}</td>
-         <td class="desktop-only">${r.note || '—'}</td>
-         <td><div class="td-actions">
-           <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
-           <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
-         </div></td>
-       </tr>`;
-   }).join('');
+    }
+
+    // --- โค้ดสำหรับเวลา (ให้ดึงจาก r.time โดยตรง) ---
+    let displayTime = r.time || '—';
+    if (displayTime.includes(':')) {
+        displayTime = displayTime.split(':').slice(0, 2).join(':'); // เอาแค่ HH:mm
+    }
+    
+    return `<tr>
+      <td class="td-sub">${r.subId}</td>
+      <td style="white-space:nowrap;">${shortDate}</td> 
+      <td style="white-space:nowrap;">${displayTime}</td> 
+      <td class="td-kwh">${parseFloat(r.kwh || 0).toFixed(2)}</td>
+      <td class="td-used"><strong>${parseFloat(r.used || 0).toFixed(2)}</strong></td>
+      <td class="desktop-only">${r.user || '—'}</td>
+      <td class="desktop-only">${r.note || '—'}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
 }
 
 function populateDDs(){
