@@ -98,17 +98,18 @@ body {
 
 /* ═══════════════════════════════════════════ HEADER ═══ */
 .hdr {
-  flex: 0 0 auto;
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
-  padding: 0 16px;
-  height: 56px;
   display: flex;
   align-items: center;
   gap: 10px;
-  z-index: 50;
-  box-shadow: var(--shadow-sm);
+  padding: 0 16px;
+  height: 56px;
+  overflow: hidden; /* ป้องกันไม่ให้ทะลุขอบ */
 }
+.hdr > div:nth-child(2) {
+  flex: 1;          /* ให้กินพื้นที่ที่เหลือทั้งหมด */
+  min-width: 0;     /* จุดสำคัญ: ถ้าไม่มีอันนี้ ข้อความจะไม่ยอมหด */
+  overflow: hidden; /* ซ่อนสิ่งที่เกิน */
+}   
 .hdr-logo {
   width: 36px; height: 36px;
   background: var(--btn-primary-bg);
@@ -117,18 +118,22 @@ body {
   font-size: 18px; flex-shrink: 0;
 }
 .hdr-title {
-  /* ขนาดตัวหนังสือ: เล็กสุด 14px, ขนาดกลาง 3vw, ใหญ่สุด 20px */
-  font-size: clamp(14px, 3.5vw, 20px);
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-1);
-  
-  /* ป้องกันการล้น */
-  white-space: nowrap;      /* บังคับให้อยู่บรรทัดเดียว */
-  overflow: hidden;         /* ซ่อนส่วนที่เกิน */
-  text-overflow: ellipsis;  /* เติมจุดไข่ปลา ... เมื่อข้อความยาวเกิน */
+  white-space: nowrap;      /* ห้ามขึ้นบรรทัดใหม่ */
+  overflow: hidden;
+  text-overflow: ellipsis;  /* แสดงผลเป็น ... ถ้าชื่อยาวเกิน */
 }
+   
 .hdr-sub   { font-size: 10px; color: var(--text-3); margin-top: 1px; }
-.hdr-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.hdr-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;           /* สำคัญ: บอกว่าห้ามหดตัวเด็ดขาด! */
+}
 
 /* Theme toggle */
 .theme-btn {
