@@ -84,7 +84,7 @@
 
 /* ═══════════════════════════════════════════ BASE ═══ */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; overflow:hidden; }
+html, body { height:100%; overflow:auto; }
 body {
   font-family: var(--font-body);
   background: var(--bg);
@@ -120,8 +120,9 @@ body {
   font-size: 20px;
   font-weight: 700;
   color: var(--text-1);
-  word-wrap: break-word; /* ป้องกันคำยาวล้น */
-  overflow-wrap: break-word;
+  word-break: break-all; /* เปลี่ยนเป็น break-all เพื่อให้ตัดคำได้เด็ดขาดกว่า */
+  overflow: hidden;      /* ป้องกันไม่ให้ล้นออกนอกกล่อง */
+  min-width: 0;          /* บังคับ Flexbox ให้หดตัวได้ */
 }
 .hdr-sub   { font-size: 10px; color: var(--text-3); margin-top: 1px; }
 .hdr-right { margin-left:auto; display:flex; align-items:center; gap:8px; }
@@ -165,7 +166,16 @@ body {
   font-size: 10px; font-weight: 700;
   padding: 4px 10px; border-radius: 20px; white-space: nowrap;
 }
+.container {
+  width: 100vw; /* ใช้ความกว้างเต็มจอวิวพอร์ต */
+  max-width: 1200px;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
 
+   
 /* ═══════════════════════════════════════════ SYNC BANNER ═══ */
 .sync-banner {
   flex: 0 0 auto; display: none; align-items: center; gap: 8px;
