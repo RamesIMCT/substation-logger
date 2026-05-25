@@ -100,10 +100,9 @@ body {
 .hdr {
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 0 16px;
+  gap: 12px;
   height: 56px;
-  overflow: hidden; /* ป้องกันไม่ให้ทะลุขอบ */
 }
 .hdr > div:nth-child(2) {
   flex: 1;          /* ให้กินพื้นที่ที่เหลือทั้งหมด */
@@ -118,21 +117,20 @@ body {
   font-size: 18px; flex-shrink: 0;
 }
 .hdr-title {
-  font-size: 20px;
+  font-size: clamp(14px, 4vw, 20px); /* ย่อขนาดตามจอ */
   font-weight: 700;
-  color: var(--text-1);
-  white-space: nowrap;      /* ห้ามขึ้นบรรทัดใหม่ */
+  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;  /* แสดงผลเป็น ... ถ้าชื่อยาวเกิน */
+  text-overflow: ellipsis; /* ตัดข้อความที่ยาวเกินเป็น ... */
+  min-width: 0;           /* สำคัญมาก: ช่วยให้ Flexbox ยอมหดตัว */
 }
    
 .hdr-sub   { font-size: 10px; color: var(--text-3); margin-top: 1px; }
 .hdr-right {
   margin-left: auto;
   display: flex;
-  align-items: center;
   gap: 8px;
-  flex-shrink: 0;           /* สำคัญ: บอกว่าห้ามหดตัวเด็ดขาด! */
+  flex-shrink: 0;         /* ห้ามปุ่มขวาสุดหดตัว */
 }
 
 /* Theme toggle */
@@ -167,11 +165,11 @@ body {
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
 /* Badge */
-#hdr-badge {
+.hdr-badge {
   position: absolute;
-  top: 16px;    /* ห่างจากขอบบนเท่ากับ padding ของ card */
-  right: 16px;  /* ห่างจากขอบขวา */
-  margin: 0;    /* ลบ margin เดิมออก */
+  top: 10px;
+  right: 10px;
+  font-size: 10px;
 }
 .container {
   width: 100vw; /* ใช้ความกว้างเต็มจอวิวพอร์ต */
@@ -229,13 +227,8 @@ body {
 
 /* ═══════════════════════════════════════════ CARDS ═══ */
 .card {
-  position: relative; /* สำคัญ: เพื่อให้ Badge อ้างอิงตำแหน่งจาก Card นี้ */
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-sm);
+  position: relative; /* สำหรับให้ 9 rec อ้างอิงตำแหน่ง */
+  padding-top: 30px;  /* เพิ่มพื้นที่ด้านบนเผื่อไว้สำหรับ Badge */
 }
 .card-title {
   font-size: 10px; font-weight: 700;
