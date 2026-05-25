@@ -1507,36 +1507,40 @@ function renderData(filtered) {
   empty.style.display = 'none';
   
   body.innerHTML = rows.map(r => {
-    // 1. แปลงวันที่ให้สั้นลง (เช่น 2026-05-22 -> 22/05)
-    const dateParts = r.date.split('-');
-    const shortDate = dateParts.length >= 3 ? `${dateParts[2]}/${dateParts[1]}` : r.date;
-    
-    // 2. จัดการเวลา
-    let displayTime = '—';
-    if (r.time) {
-      if (r.time.includes(':') && r.time.length <= 5) {
-        displayTime = r.time;
-      } else {
+     // --- แก้ไขส่วนวันที่ ---
+     let shortDate = r.date;
+     if (r.date && r.date.includes('-')) {
+       const parts = r.date.split('-'); // ["2026", "05", "23"]
+       if (parts.length === 3) {
+         shortDate = `${parts[2]}/${parts[1]}`; // เอาวันที่/เดือน (23/05)
+       }
+     }
+   
+     // --- จัดการเวลา ---
+     // (ใช้โค้ดเดิมของคุณ แต่ตรวจสอบให้แน่ใจว่า displayTime แสดงผลถูกต้อง)
+     let displayTime = r.time || '—';
+     if (displayTime.length > 5) {
+        // ถ้ามี Z หรือ T หรือ ISO string ให้ตัดเหลือแค่ HH:mm
         const d = new Date(r.time);
-        displayTime = !isNaN(d.getTime()) ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : r.time;
-      }
-    }
-    
-    // 3. ใส่ Class ให้คอลัมน์เพื่อให้เราจัดการซ่อนได้ใน CSS
-    return `<tr>
-      <td class="td-sub">${r.subId}</td>
-      <td>${shortDate}</td> 
-      <td>${displayTime}</td> 
-      <td class="td-kwh">${parseFloat(r.kwh || 0).toFixed(2)}</td>
-      <td class="td-used"><strong>${parseFloat(r.used || 0).toFixed(2)}</strong></td>
-      <td class="desktop-only">${r.user || '—'}</td>
-      <td class="desktop-only">${r.note || '—'}</td>
-      <td><div class="td-actions">
-        <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
-      </div></td>
-    </tr>`;
-  }).join('');
+        if (!isNaN(d.getTime())) {
+           displayTime = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        }
+     }
+       
+     return `<tr>
+         <td class="td-sub">${r.subId}</td>
+         <td style="white-space:nowrap;">${shortDate}</td> 
+         <td style="white-space:nowrap;">${displayTime}</td> 
+         <td class="td-kwh">${parseFloat(r.kwh || 0).toFixed(2)}</td>
+         <td class="td-used"><strong>${parseFloat(r.used || 0).toFixed(2)}</strong></td>
+         <td class="desktop-only">${r.user || '—'}</td>
+         <td class="desktop-only">${r.note || '—'}</td>
+         <td><div class="td-actions">
+           <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
+           <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
+         </div></td>
+       </tr>`;
+   }).join('');
 }
 
 function populateDDs(){
