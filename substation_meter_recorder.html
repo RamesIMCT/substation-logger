@@ -1508,32 +1508,32 @@ function renderData(filtered) {
   
   // แทนที่โค้ดเดิมในส่วนการ map ข้อมูล
   body.innerHTML = rows.map(r => {
-    
-    // --- โค้ดที่ถูกต้องสำหรับการดึงวันที่มาแสดงเป็น DD/MM ---
-    let shortDate = '—';
+    // --- จัดการวันที่ (DD/MM/YYYY) ---
+    let displayDate = '—';
     if (r.date) {
-        // สมมติว่า r.date มาเป็น "2026-05-22"
-        const dateObj = new Date(r.date); 
-        if (!isNaN(dateObj.getTime())) {
-            const d = String(dateObj.getDate()).padStart(2, '0');
-            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-            shortDate = `${d}/${m}`; // ได้ "22/05"
-        } else {
-            // กรณีถ้า r.date ไม่ใช่ Date Object ลอง split ดู
-            const parts = r.date.split('-');
-            if(parts.length === 3) shortDate = `${parts[2]}/${parts[1]}`;
+        const dObj = new Date(r.date);
+        if (!isNaN(dObj.getTime())) {
+            const d = String(dObj.getDate()).padStart(2, '0');
+            const m = String(dObj.getMonth() + 1).padStart(2, '0');
+            const y = dObj.getFullYear();
+            displayDate = `${d}/${m}/${y}`;
         }
     }
 
-    // --- โค้ดสำหรับเวลา (ให้ดึงจาก r.time โดยตรง) ---
-    let displayTime = r.time || '—';
-    if (displayTime.includes(':')) {
-        displayTime = displayTime.split(':').slice(0, 2).join(':'); // เอาแค่ HH:mm
+    // --- จัดการเวลา (HH:mm) ---
+    let displayTime = '—';
+    if (r.time) {
+        const tObj = new Date(r.time);
+        if (!isNaN(tObj.getTime())) {
+            const hh = String(tObj.getHours()).padStart(2, '0');
+            const mm = String(tObj.getMinutes()).padStart(2, '0');
+            displayTime = `${hh}:${mm}`;
+        }
     }
     
     return `<tr>
       <td class="td-sub">${r.subId}</td>
-      <td style="white-space:nowrap;">${shortDate}</td> 
+      <td style="white-space:nowrap;">${displayDate}</td> 
       <td style="white-space:nowrap;">${displayTime}</td> 
       <td class="td-kwh">${parseFloat(r.kwh || 0).toFixed(2)}</td>
       <td class="td-used"><strong>${parseFloat(r.used || 0).toFixed(2)}</strong></td>
