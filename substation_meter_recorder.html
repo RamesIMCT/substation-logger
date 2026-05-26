@@ -783,21 +783,20 @@ function toggleAdmin() {
     const pwd = prompt('🔐 รหัสผ่านผู้ดูแลระบบ:');
     if (pwd === ADMIN_PASS) {
       appMode = 'admin';
-      btn.textContent = '🔓 แอดมิน';
-      btn.classList.add('on');
+      btn.textContent = '🔓 แอดมิน'; btn.classList.add('on');
       toast('เข้าสู่โหมดแอดมิน', 'ok');
     } else if (pwd !== null) {
       toast('รหัสผ่านไม่ถูกต้อง', 'err');
     }
   } else {
     appMode = 'basic';
-    btn.textContent = '🔐 ทั่วไป';
-    btn.classList.remove('on');
+    btn.textContent = '🔐 ทั่วไป'; btn.classList.remove('on');
     toast('กลับโหมดทั่วไป');
     goTab('entry');
   }
   document.querySelectorAll('.admin-tab').forEach(t => {
-    t.style.display = appMode === 'admin' ? 'flex' : 'none';
+    // FIX: เปลี่ยนจาก 'flex' เป็น '' เพื่อไม่ให้ไปฝืนทับ CSS หลักของแถบเมนูตาราง
+    t.style.display = appMode === 'admin' ? '' : 'none';
   });
 }
 
@@ -1179,24 +1178,40 @@ function updateBadge() {
 ══════════════════════════════════════════════════════ */
 function renderChart() {
   const subId = document.getElementById('chart-sub').value;
-  const area = document.getElementById('chart-area');
-  if (!subId) {
-    area.innerHTML = '<div class="empty"><i>📈</i>เลือก Sub เพื่อดูกราฟ</div>';
-    return;
-  }
+  const area  = document.getElementById('chart-area');
+  if (!subId) { area.innerHTML = '<div class="empty"><i>📈</i>เลือก Sub เพื่อดูกราฟ</div>'; return; }
   const recs = getSubRecs(subId);
-  if (recs.length < 2) {
-    area.innerHTML = '<div class="empty"><i>📊</i>ต้องมีอย่างน้อย 2 records</div>';
-    return;
-  }
+  if (recs.length < 2) { area.innerHTML = '<div class="empty"><i>📊</i>ต้องมีอย่างน้อย 2 records</div>'; return; }
+  
   const maxVal = Math.max(...recs.map(r => Math.max(0, parseFloat(r.used) || 0)), 1);
+  const subConfig = subs.find(s => s.id === subId);
+  const dec = (subConfig && subConfig.decimals !== undefined) ? subConfig.decimals : 2;
+
+  // ปรับสไตล์ตัว Container ของกราฟให้เป็น Flexbox แนวตั้งและการเลื่อนแกน X (เมื่อดูในมือถือ)
+  area.style.display = 'flex';
+  area.style.alignItems = 'flex-end';
+  area.style.gap = '20px';
+  area.style.height = '320px';
+  area.style.overflowX = 'auto';
+  area.style.padding = '30px 15px 10px 15px';
+
   area.innerHTML = recs.map(r => {
     const pct = Math.round(Math.max(0, parseFloat(r.used) || 0) / maxVal * 100);
-    return `<div class="bar-row">
-      <div class="bar-label">${fmtShortDate(r.date)}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <div class="bar-val">${fmtNum(r.used || 0, subId)}</div>
-    </div>`;
+    // ฟอร์แมตการแสดงผลเวลาและวันที่ให้อยู่ในบรรทัดเดียวกันตามฟีดแบ็ก
+    const timeLabel = fmtTime(r.time);
+    const dateLabel = fmtDate(r.date);
+    
+    return `
+      <div style="display:flex; flex-direction:column; align-items:center; height:100%; min-width:85px; justify-content:flex-end;">
+        <div style="font-size:11px; font-weight:700; color:var(--green); margin-bottom:6px;">${parseFloat(r.used || 0).toFixed(dec)}</div>
+        <div style="width:30px; height:180px; background:rgba(128,128,128,0.1); border-radius:4px; display:flex; align-items:flex-end;">
+          <div style="width:100%; height:${pct}%; background:linear-gradient(to top, #10b981, #34d399); border-radius:4px; transition: height 0.3s ease;"></div>
+        </div>
+        <div style="font-size:10px; text-align:center; margin-top:8px; line-height:1.3; color:var(--text-2); white-space:nowrap;">
+          <strong>${timeLabel}</strong><br>${dateLabel}
+        </div>
+      </div>
+    `;
   }).join('');
 }
 
