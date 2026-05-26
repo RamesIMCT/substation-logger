@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════════════
-   1. DESIGN TOKENS
+   DESIGN TOKENS
 ══════════════════════════════════════════════════════ */
 :root {
   --font-body: 'IBM Plex Sans Thai', sans-serif;
@@ -20,7 +20,6 @@
   --shadow-md: 0 4px 16px rgba(0,0,0,.18);
   --shadow-lg: 0 8px 32px rgba(0,0,0,.22);
   --trans: all .2s cubic-bezier(.4,0,.2,1);
-  /* Responsive font scale */
   --fs-xs:  clamp(9px,  2vw, 10px);
   --fs-sm:  clamp(11px, 2.5vw, 12px);
   --fs-md:  clamp(13px, 3vw,  14px);
@@ -30,611 +29,222 @@
 }
 
 [data-theme="dark"] {
-  --bg:             #0b1220;
-  --surface-1:      #111827;
-  --surface-2:      #1a2336;
-  --surface-3:      #1f2d42;
-  --surface-4:      #243350;
-  --border:         #1e2e45;
-  --border-hi:      #2a3f60;
-  --text-1:         #e8f0ff;
-  --text-2:         #8fa8c8;
-  --text-3:         #4e6a8a;
-  --accent:         #38bdf8;
-  --accent-dim:     rgba(56,189,248,.12);
-  --accent-border:  rgba(56,189,248,.3);
-  --green:          #34d399;
-  --green-dim:      rgba(52,211,153,.12);
-  --green-border:   rgba(52,211,153,.3);
-  --orange:         #fb923c;
-  --orange-dim:     rgba(251,146,60,.12);
-  --red:            #f87171;
-  --red-dim:        rgba(248,113,113,.12);
-  --purple:         #a78bfa;
-  --yellow:         #fbbf24;
-  --yellow-dim:     rgba(251,191,36,.12);
-  --btn-pri-bg:     linear-gradient(135deg,#38bdf8,#0284c7);
-  --btn-pri-text:   #000;
-  --btn-save-bg:    linear-gradient(135deg,#34d399,#059669);
-  --btn-save-text:  #000;
+  --bg: #0b1220; --surface-1: #111827; --surface-2: #1a2336; --surface-3: #1f2d42;
+  --surface-4: #243350; --border: #1e2e45; --border-hi: #2a3f60;
+  --text-1: #e8f0ff; --text-2: #8fa8c8; --text-3: #4e6a8a;
+  --accent: #38bdf8; --accent-dim: rgba(56,189,248,.12); --accent-border: rgba(56,189,248,.3);
+  --green: #34d399; --green-dim: rgba(52,211,153,.12); --green-border: rgba(52,211,153,.3);
+  --orange: #fb923c; --orange-dim: rgba(251,146,60,.12);
+  --red: #f87171; --red-dim: rgba(248,113,113,.12);
+  --purple: #a78bfa; --yellow: #fbbf24; --yellow-dim: rgba(251,191,36,.12);
+  --btn-pri-bg: linear-gradient(135deg,#38bdf8,#0284c7); --btn-pri-text: #000;
+  --btn-save-bg: linear-gradient(135deg,#34d399,#059669); --btn-save-text: #000;
 }
 
 [data-theme="light"] {
-  --bg:             #f0f4f8;
-  --surface-1:      #ffffff;
-  --surface-2:      #f8fafc;
-  --surface-3:      #eef2f7;
-  --surface-4:      #e4eaf4;
-  --border:         #d1dce8;
-  --border-hi:      #b8c9de;
-  --text-1:         #0f1e33;
-  --text-2:         #3d5a7a;
-  --text-3:         #7a98b8;
-  --accent:         #0284c7;
-  --accent-dim:     rgba(2,132,199,.08);
-  --accent-border:  rgba(2,132,199,.25);
-  --green:          #059669;
-  --green-dim:      rgba(5,150,105,.08);
-  --green-border:   rgba(5,150,105,.25);
-  --orange:         #d97706;
-  --orange-dim:     rgba(217,119,6,.08);
-  --red:            #dc2626;
-  --red-dim:        rgba(220,38,38,.08);
-  --purple:         #7c3aed;
-  --yellow:         #d97706;
-  --yellow-dim:     rgba(217,119,6,.08);
-  --btn-pri-bg:     linear-gradient(135deg,#0284c7,#0369a1);
-  --btn-pri-text:   #fff;
-  --btn-save-bg:    linear-gradient(135deg,#059669,#047857);
-  --btn-save-text:  #fff;
+  --bg: #f0f4f8; --surface-1: #ffffff; --surface-2: #f8fafc; --surface-3: #eef2f7;
+  --surface-4: #e4eaf4; --border: #d1dce8; --border-hi: #b8c9de;
+  --text-1: #0f1e33; --text-2: #3d5a7a; --text-3: #7a98b8;
+  --accent: #0284c7; --accent-dim: rgba(2,132,199,.08); --accent-border: rgba(2,132,199,.25);
+  --green: #059669; --green-dim: rgba(5,150,105,.08); --green-border: rgba(5,150,105,.25);
+  --orange: #d97706; --orange-dim: rgba(217,119,6,.08);
+  --red: #dc2626; --red-dim: rgba(220,38,38,.08);
+  --purple: #7c3aed; --yellow: #d97706; --yellow-dim: rgba(217,119,6,.08);
+  --btn-pri-bg: linear-gradient(135deg,#0284c7,#0369a1); --btn-pri-text: #fff;
+  --btn-save-bg: linear-gradient(135deg,#059669,#047857); --btn-save-text: #fff;
 }
 
-/* ══════════════════════════════════════════════════════
-   2. RESET & BASE
-══════════════════════════════════════════════════════ */
-*, *::before, *::after {
-  margin: 0; padding: 0;
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
-html, body { height: 100%; overflow: hidden; }
-body {
-  font-family: var(--font-body);
-  font-size: var(--fs-md);
-  line-height: 1.5;
-  background: var(--bg);
-  color: var(--text-1);
-  display: flex;
-  flex-direction: column;
-  transition: background .25s, color .25s;
-}
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+/* BASE */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; overflow:hidden; }
+body { font-family:var(--font-body); font-size:var(--fs-md); line-height:1.5; background:var(--bg); color:var(--text-1); display:flex; flex-direction:column; transition:background .25s, color .25s; }
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
 
-/* ══════════════════════════════════════════════════════
-   3. LAYOUT — HEADER
-══════════════════════════════════════════════════════ */
-.hdr {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  gap: 10px;
-  height: 52px;
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
-  z-index: 50;
-}
-.hdr-logo {
-  width: 34px; height: 34px;
-  background: var(--btn-pri-bg);
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px; flex-shrink: 0;
-}
-.hdr-text { flex: 1; min-width: 0; overflow: hidden; }
-.hdr-title {
-  font-size: clamp(12px, 3.5vw, 16px);
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.hdr-sub { font-size: var(--fs-xs); color: var(--text-3); margin-top: 1px; }
-.hdr-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-
-.theme-btn {
-  width: 32px; height: 32px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 15px;
-  transition: var(--trans); flex-shrink: 0;
-}
-.theme-btn:hover { background: var(--surface-4); }
-
-.btn-admin {
-  font-size: var(--fs-xs); font-weight: 600;
-  padding: 5px 9px; border-radius: 7px; cursor: pointer;
-  border: 1px solid var(--border);
-  background: var(--surface-3);
-  color: var(--text-2);
-  white-space: nowrap;
-  transition: var(--trans);
-}
-.btn-admin.on { background: var(--red-dim); border-color: var(--red); color: var(--red); }
-
-.sync-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--border); flex-shrink: 0;
-  transition: background .3s;
-}
-.sync-dot.ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.sync-dot.err  { background: var(--red);   box-shadow: 0 0 6px var(--red); }
-.sync-dot.busy { background: var(--yellow); animation: blink 1s infinite; }
+/* HEADER */
+.hdr { flex:0 0 auto; display:flex; align-items:center; padding:0 12px; gap:10px; height:52px; background:var(--surface-1); border-bottom:1px solid var(--border); z-index:50; }
+.hdr-logo { width:34px; height:34px; background:var(--btn-pri-bg); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.hdr-text { flex:1; min-width:0; overflow:hidden; }
+.hdr-title { font-size:clamp(12px,3.5vw,16px); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hdr-sub { font-size:var(--fs-xs); color:var(--text-3); margin-top:1px; }
+.hdr-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.theme-btn { width:32px; height:32px; background:var(--surface-3); border:1px solid var(--border); border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; transition:var(--trans); flex-shrink:0; }
+.theme-btn:hover { background:var(--surface-4); }
+.btn-admin { font-size:var(--fs-xs); font-weight:600; padding:5px 9px; border-radius:7px; cursor:pointer; border:1px solid var(--border); background:var(--surface-3); color:var(--text-2); white-space:nowrap; transition:var(--trans); }
+.btn-admin.on { background:var(--red-dim); border-color:var(--red); color:var(--red); }
+.sync-dot { width:8px; height:8px; border-radius:50%; background:var(--border); flex-shrink:0; transition:background .3s; }
+.sync-dot.ok { background:var(--green); box-shadow:0 0 6px var(--green); }
+.sync-dot.err { background:var(--red); box-shadow:0 0 6px var(--red); }
+.sync-dot.busy { background:var(--yellow); animation:blink 1s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* ══════════════════════════════════════════════════════
-   3b. LAYOUT — SYNC BANNER
-══════════════════════════════════════════════════════ */
-.sync-banner {
-  flex: 0 0 auto;
-  display: none;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  border-bottom: 1px solid var(--border);
-}
-.sync-banner.show    { display: flex; }
-.sync-banner.loading { background: var(--yellow-dim); color: var(--yellow); }
-.sync-banner.error   { background: var(--red-dim);    color: var(--red); }
-.sync-banner.success { background: var(--green-dim);  color: var(--green); }
+/* SYNC BANNER */
+.sync-banner { flex:0 0 auto; display:none; align-items:center; gap:8px; padding:6px 14px; font-size:var(--fs-xs); font-weight:600; border-bottom:1px solid var(--border); }
+.sync-banner.show { display:flex; }
+.sync-banner.loading { background:var(--yellow-dim); color:var(--yellow); }
+.sync-banner.error { background:var(--red-dim); color:var(--red); }
+.sync-banner.success { background:var(--green-dim); color:var(--green); }
 
-/* ══════════════════════════════════════════════════════
-   3c. LAYOUT — TABS
-══════════════════════════════════════════════════════ */
-.tabs {
-  flex: 0 0 auto;
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar { display: none; }
-.tab {
-  flex: 1; min-width: 55px;
-  padding: 9px 4px 8px;
-  text-align: center;
-  font-size: var(--fs-xs); font-weight: 700;
-  color: var(--text-3);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: var(--trans);
-  white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: .3px;
-}
-.tab i { display: block; font-size: 16px; margin-bottom: 2px; font-style: normal; }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab:hover:not(.active) { color: var(--text-2); background: var(--surface-2); }
+/* TABS */
+.tabs { flex:0 0 auto; background:var(--surface-1); border-bottom:1px solid var(--border); display:flex; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab { flex:1; min-width:55px; padding:9px 4px 8px; text-align:center; font-size:var(--fs-xs); font-weight:700; color:var(--text-3); cursor:pointer; border-bottom:2px solid transparent; transition:var(--trans); white-space:nowrap; text-transform:uppercase; letter-spacing:.3px; }
+.tab i { display:block; font-size:16px; margin-bottom:2px; font-style:normal; }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab:hover:not(.active) { color:var(--text-2); background:var(--surface-2); }
 
-/* ══════════════════════════════════════════════════════
-   3d. LAYOUT — BODY & PANELS
-══════════════════════════════════════════════════════ */
-.body  { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
-.panel { display: none; padding: 14px 12px 90px; }
-.panel.active { display: block; }
+/* BODY & PANELS */
+.body { flex:1; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+.panel { display:none; padding:14px 12px 90px; }
+.panel.active { display:block; }
 
-/* ══════════════════════════════════════════════════════
-   4. CARDS & ZONES
-══════════════════════════════════════════════════════ */
-.card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 14px;
-  margin-bottom: 12px;
-  position: relative;
-}
-.card-title {
-  font-size: var(--fs-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 1px;
-  color: var(--accent);
-  margin-bottom: 12px;
-  display: flex; align-items: center; gap: 6px;
-}
-.card-title::after {
-  content: ''; flex: 1; height: 1px;
-  background: var(--border);
-}
+/* CARDS */
+.card { background:var(--surface-1); border:1px solid var(--border); border-radius:var(--r-lg); padding:14px; margin-bottom:12px; position:relative; }
+.card-title { font-size:var(--fs-xs); font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.rec-badge { position:absolute; top:14px; right:14px; background:var(--surface-3); border:1px solid var(--border); border-radius:20px; padding:2px 9px; font-size:var(--fs-xs); color:var(--text-3); font-weight:600; }
 
-/* Record count badge */
-.rec-badge {
-  position: absolute; top: 14px; right: 14px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 2px 9px;
-  font-size: var(--fs-xs);
-  color: var(--text-3);
-  font-weight: 600;
-}
+/* ZONES */
+.zone-block { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); padding:10px; margin-bottom:8px; }
+.zone-title { font-size:var(--fs-sm); font-weight:700; color:var(--purple); margin-bottom:8px; display:flex; align-items:center; gap:5px; }
+.sub-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); gap:6px; }
+.sub-card { background:var(--surface-3); border:1.5px solid var(--border); border-radius:var(--r-md); padding:10px 6px; cursor:pointer; text-align:center; transition:var(--trans); position:relative; min-height:60px; display:flex; flex-direction:column; align-items:center; justify-content:center; user-select:none; }
+.sub-card:active { transform:scale(.93); }
+.sub-card.sel { border-color:var(--accent); background:var(--accent-dim); box-shadow:0 0 0 1px var(--accent-border); }
+.sub-card:hover:not(.sel) { border-color:var(--border-hi); background:var(--surface-4); }
+.sc-id { font-size:var(--fs-sm); font-weight:700; color:var(--accent); font-family:var(--font-mono); }
+.sc-name { font-size:8px; color:var(--text-3); margin-top:2px; line-height:1.3; }
+.sc-dot { width:5px; height:5px; border-radius:50%; background:var(--border); position:absolute; top:5px; right:5px; transition:var(--trans); }
+.sub-card.has-data .sc-dot { background:var(--green); box-shadow:0 0 5px var(--green); }
 
-/* Zone block */
-.zone-block {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 10px;
-  margin-bottom: 8px;
-}
-.zone-title {
-  font-size: var(--fs-sm); font-weight: 700;
-  color: var(--purple);
-  margin-bottom: 8px;
-  display: flex; align-items: center; gap: 5px;
-}
+/* BUTTONS */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:11px 16px; border:none; border-radius:var(--r-md); font-size:var(--fs-md); font-weight:700; cursor:pointer; transition:var(--trans); font-family:var(--font-body); letter-spacing:.2px; min-height:44px; }
+.btn:active { transform:scale(.97); }
+.btn:disabled { opacity:.45; pointer-events:none; }
+.btn-full { width:100%; }
+.btn-primary { background:var(--btn-pri-bg); color:var(--btn-pri-text); }
+.btn-save { background:var(--btn-save-bg); color:var(--btn-save-text); padding:14px; font-size:var(--fs-lg); border-radius:var(--r-lg); box-shadow:var(--shadow-md); }
+.btn-danger { background:var(--red-dim); border:1px solid var(--red); color:var(--red); }
+.btn-ghost { background:transparent; border:1px solid var(--border); color:var(--text-2); }
+.btn-yellow { background:var(--yellow-dim); border:1px solid rgba(251,191,36,.3); color:var(--yellow); }
+.btn-sm { padding:7px 11px; font-size:var(--fs-sm); min-height:34px; border-radius:var(--r-sm); }
+.btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.btn-row .btn { width:auto; }
+.back-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--border); color:var(--text-2); font-size:var(--fs-md); font-weight:600; cursor:pointer; transition:var(--trans); margin-bottom:12px; font-family:var(--font-body); min-height:40px; }
+.back-btn:hover { background:var(--surface-3); }
 
-/* Substation grid */
-.sub-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 6px;
-}
-.sub-card {
-  background: var(--surface-3);
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 10px 6px;
-  cursor: pointer; text-align: center;
-  transition: var(--trans); position: relative;
-  min-height: 60px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  -webkit-user-select: none; user-select: none;
-}
-.sub-card:active { transform: scale(.93); }
-.sub-card.sel {
-  border-color: var(--accent);
-  background: var(--accent-dim);
-  box-shadow: 0 0 0 1px var(--accent-border);
-}
-.sub-card:hover:not(.sel) { border-color: var(--border-hi); background: var(--surface-4); }
-.sc-id   { font-size: var(--fs-sm); font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
-.sc-name { font-size: 8px; color: var(--text-3); margin-top: 2px; line-height: 1.3; }
-.sc-dot  {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--border);
-  position: absolute; top: 5px; right: 5px;
-  transition: var(--trans);
-}
-.sub-card.has-data .sc-dot { background: var(--green); box-shadow: 0 0 5px var(--green); }
+/* FORMS */
+.f-row { margin-bottom:11px; }
+.f-label { font-size:var(--fs-xs); color:var(--text-3); font-weight:700; margin-bottom:5px; display:flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:.5px; }
+.f-input { width:100%; background:var(--surface-3); border:1.5px solid var(--border); border-radius:var(--r-sm); color:var(--text-1); padding:11px 12px; font-size:var(--fs-md); outline:none; transition:var(--trans); font-family:var(--font-body); -webkit-appearance:none; min-height:44px; }
+.f-input:focus { border-color:var(--accent); background:var(--surface-4); box-shadow:0 0 0 3px var(--accent-dim); }
+.f-input.kwh-input { font-size:var(--fs-2xl); font-weight:700; text-align:center; color:var(--green); letter-spacing:3px; padding:16px; background:var(--surface-2); border-radius:var(--r-lg); font-family:var(--font-mono); min-height:72px; }
+select.f-input option { background:var(--surface-2); }
+.f-2col { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.f-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
 
-/* ══════════════════════════════════════════════════════
-   5. BUTTONS
-══════════════════════════════════════════════════════ */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 11px 16px;
-  border: none; border-radius: var(--r-md);
-  font-size: var(--fs-md); font-weight: 700;
-  cursor: pointer; transition: var(--trans);
-  font-family: var(--font-body);
-  letter-spacing: .2px;
-  min-height: 44px; /* accessibility tap target */
-}
-.btn:active   { transform: scale(.97); }
-.btn:disabled { opacity: .45; pointer-events: none; }
+/* ENTRY SECTION */
+#entry-section { display:none; position:fixed; top:52px; left:0; right:0; bottom:0; background:var(--bg); z-index:100; padding:12px 12px 90px; overflow-y:auto; -webkit-overflow-scrolling:touch; animation:fadeIn .18s ease-out; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+.sub-banner { background:var(--accent-dim); border:1.5px solid var(--accent-border); border-radius:var(--r-lg); padding:12px 14px; margin-bottom:12px; display:flex; align-items:center; gap:12px; }
+.sb-icon { font-size:26px; flex-shrink:0; }
+.sb-label { font-size:var(--fs-xs); color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; }
+.sb-id { font-size:var(--fs-xl); font-weight:700; color:var(--accent); display:block; font-family:var(--font-mono); }
+.sb-name { font-size:var(--fs-sm); color:var(--text-2); margin-top:2px; }
 
-.btn-full    { width: 100%; }
-.btn-primary { background: var(--btn-pri-bg);  color: var(--btn-pri-text); }
-.btn-save    { background: var(--btn-save-bg); color: var(--btn-save-text);
-               padding: 14px; font-size: var(--fs-lg);
-               border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
-.btn-danger  { background: var(--red-dim);    border: 1px solid var(--red);    color: var(--red); }
-.btn-ghost   { background: transparent;       border: 1px solid var(--border); color: var(--text-2); }
-.btn-yellow  { background: var(--yellow-dim); border: 1px solid rgba(251,191,36,.3); color: var(--yellow); }
+/* METER */
+.meter-card { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-lg); padding:14px; margin-bottom:12px; }
+.meter-row { display:flex; gap:8px; margin-bottom:12px; }
+.meter-box { flex:1; background:var(--surface-1); border:1px solid var(--border); border-radius:var(--r-md); padding:12px; text-align:center; }
+.meter-box.hi { border-color:var(--green-border); background:var(--green-dim); }
+.mb-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+.mb-val { font-size:var(--fs-xl); font-weight:700; font-family:var(--font-mono); }
+.mb-unit { font-size:8px; color:var(--text-3); margin-top:3px; }
+.arrow-box { display:flex; align-items:center; justify-content:center; padding-top:16px; font-size:16px; color:var(--text-3); }
+.chip { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border-radius:20px; font-size:var(--fs-sm); font-weight:700; }
+.chip-green { background:var(--green-dim); color:var(--green); border:1px solid var(--green-border); }
+.chip-orange { background:var(--orange-dim); color:var(--orange); border:1px solid rgba(251,146,60,.3); }
+.chip-center { text-align:center; display:flex; justify-content:center; }
 
-.btn-sm      { padding: 7px 11px; font-size: var(--fs-sm); min-height: 34px; border-radius: var(--r-sm); }
-.btn-row     { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.btn-row .btn { width: auto; } /* prevent row buttons from going full-width */
+/* TABLE */
+.tbl-wrap { overflow-x:auto; border-radius:var(--r-md); -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; }
+th { background:var(--surface-3); color:var(--text-2); padding:8px 9px; text-align:left; border-bottom:1px solid var(--border); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; font-weight:700; }
+td { padding:9px 9px; border-bottom:1px solid var(--border); white-space:nowrap; font-size:var(--fs-sm); vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--surface-2); }
+.td-sub { color:var(--accent); font-weight:700; font-family:var(--font-mono); }
+.td-kwh { color:var(--text-1); font-family:var(--font-mono); }
+.td-used { color:var(--green); font-weight:700; font-family:var(--font-mono); }
+.td-act { display:flex; gap:4px; }
 
-/* Back button */
-.back-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 13px; border-radius: var(--r-md);
-  background: var(--surface-2); border: 1px solid var(--border);
-  color: var(--text-2); font-size: var(--fs-md); font-weight: 600;
-  cursor: pointer; transition: var(--trans);
-  margin-bottom: 12px; font-family: var(--font-body);
-  min-height: 40px;
-}
-.back-btn:hover { background: var(--surface-3); }
+/* STATS */
+.stats-row { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px; }
+.stat { background:var(--surface-1); border:1px solid var(--border); border-radius:var(--r-lg); padding:12px; text-align:center; box-shadow:var(--shadow-sm); }
+.stat-val { font-size:var(--fs-xl); font-weight:700; color:var(--accent); font-family:var(--font-mono); }
+.stat-lbl { font-size:var(--fs-xs); color:var(--text-3); margin-top:3px; text-transform:uppercase; letter-spacing:.5px; }
 
-/* ══════════════════════════════════════════════════════
-   6. FORM ELEMENTS
-══════════════════════════════════════════════════════ */
-.f-row   { margin-bottom: 11px; }
-.f-label {
-  font-size: var(--fs-xs); color: var(--text-3); font-weight: 700;
-  margin-bottom: 5px;
-  display: flex; align-items: center; gap: 4px;
-  text-transform: uppercase; letter-spacing: .5px;
-}
-.f-input {
-  width: 100%;
-  background: var(--surface-3);
-  border: 1.5px solid var(--border);
-  border-radius: var(--r-sm);
-  color: var(--text-1);
-  padding: 11px 12px;
-  font-size: var(--fs-md);
-  outline: none;
-  transition: var(--trans);
-  font-family: var(--font-body);
-  -webkit-appearance: none;
-  min-height: 44px;
-}
-.f-input:focus { border-color: var(--accent); background: var(--surface-4); box-shadow: 0 0 0 3px var(--accent-dim); }
-.f-input.kwh-input {
-  font-size: var(--fs-2xl); font-weight: 700; text-align: center;
-  color: var(--green); letter-spacing: 3px;
-  padding: 16px; background: var(--surface-2);
-  border-radius: var(--r-lg); font-family: var(--font-mono);
-  min-height: 72px;
-}
-select.f-input option { background: var(--surface-2); }
-.f-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* CHARTS */
+.bar-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.bar-label { font-size:var(--fs-xs); color:var(--text-3); width:55px; text-align:right; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--font-mono); }
+.bar-track { flex:1; background:var(--surface-3); border-radius:5px; height:18px; overflow:hidden; }
+.bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--green)); border-radius:5px; transition:width .5s cubic-bezier(.4,0,.2,1); }
+.bar-val { font-size:var(--fs-xs); color:var(--green); width:65px; flex-shrink:0; font-weight:700; font-family:var(--font-mono); }
 
-/* ══════════════════════════════════════════════════════
-   7. ENTRY FORM COMPONENTS
-══════════════════════════════════════════════════════ */
-/* Entry section overlay */
-#entry-section {
-  display: none;
-  position: fixed;
-  top: 52px; left: 0; right: 0; bottom: 0;
-  background: var(--bg);
-  z-index: 100;
-  padding: 12px 12px 90px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  animation: fadeIn .18s ease-out;
-}
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* QR */
+.qr-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.qr-item { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-md); padding:12px; text-align:center; }
+.qi-id { font-size:var(--fs-md); font-weight:700; color:var(--accent); margin-bottom:2px; font-family:var(--font-mono); }
+.qi-name { font-size:8px; color:var(--text-3); margin-bottom:8px; line-height:1.5; }
+.qi-qr { display:inline-block; background:#fff; padding:7px; border-radius:7px; margin-bottom:6px; }
+.qi-url { font-size:7px; color:var(--text-3); word-break:break-all; line-height:1.4; font-family:var(--font-mono); }
 
-/* Sub info banner */
-.sub-banner {
-  background: var(--accent-dim);
-  border: 1.5px solid var(--accent-border);
-  border-radius: var(--r-lg);
-  padding: 12px 14px;
-  margin-bottom: 12px;
-  display: flex; align-items: center; gap: 12px;
-}
-.sb-icon { font-size: 26px; flex-shrink: 0; }
-.sb-label { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; }
-.sb-id   { font-size: var(--fs-xl); font-weight: 700; color: var(--accent); display: block; font-family: var(--font-mono); }
-.sb-name { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
-
-/* Meter summary */
-.meter-card {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 14px; margin-bottom: 12px;
-}
-.meter-row { display: flex; gap: 8px; margin-bottom: 12px; }
-.meter-box {
-  flex: 1; background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md); padding: 12px; text-align: center;
-}
-.meter-box.hi { border-color: var(--green-border); background: var(--green-dim); }
-.mb-label { font-size: 8px; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
-.mb-val   { font-size: var(--fs-xl); font-weight: 700; font-family: var(--font-mono); }
-.mb-unit  { font-size: 8px; color: var(--text-3); margin-top: 3px; }
-.arrow-box { display: flex; align-items: center; justify-content: center; padding-top: 16px; font-size: 16px; color: var(--text-3); }
-
-/* Chips */
-.chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; border-radius: 20px;
-  font-size: var(--fs-sm); font-weight: 700;
-}
-.chip-green  { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green-border); }
-.chip-orange { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
-.chip-center { text-align: center; display: flex; justify-content: center; }
-
-/* ══════════════════════════════════════════════════════
-   8. DATA TABLE
-══════════════════════════════════════════════════════ */
-.tbl-wrap { overflow-x: auto; border-radius: var(--r-md); -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; }
-th {
-  background: var(--surface-3);
-  color: var(--text-2);
-  padding: 8px 9px; text-align: left;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--fs-xs); text-transform: uppercase;
-  letter-spacing: .5px; white-space: nowrap; font-weight: 700;
-}
-td {
-  padding: 9px 9px;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap; font-size: var(--fs-sm);
-  vertical-align: middle;
-}
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: var(--surface-2); }
-.td-sub  { color: var(--accent); font-weight: 700; font-family: var(--font-mono); }
-.td-kwh  { color: var(--text-1); font-family: var(--font-mono); }
-.td-used { color: var(--green);  font-weight: 700; font-family: var(--font-mono); }
-.td-act  { display: flex; gap: 4px; }
-
-/* ══════════════════════════════════════════════════════
-   9. STATS & CHARTS
-══════════════════════════════════════════════════════ */
-.stats-row {
-  display: grid; grid-template-columns: repeat(2,1fr);
-  gap: 8px; margin-bottom: 12px;
-}
-.stat {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 12px; text-align: center;
-  box-shadow: var(--shadow-sm);
-}
-.stat-val { font-size: var(--fs-xl); font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
-.stat-lbl { font-size: var(--fs-xs); color: var(--text-3); margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
-
-/* Bar chart */
-.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-.bar-label {
-  font-size: var(--fs-xs); color: var(--text-3);
-  width: 55px; text-align: right; flex-shrink: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-family: var(--font-mono);
-}
-.bar-track { flex: 1; background: var(--surface-3); border-radius: 5px; height: 18px; overflow: hidden; }
-.bar-fill  {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--green));
-  border-radius: 5px;
-  transition: width .5s cubic-bezier(.4,0,.2,1);
-}
-.bar-val { font-size: var(--fs-xs); color: var(--green); width: 65px; flex-shrink: 0; font-weight: 700; font-family: var(--font-mono); }
-
-/* ══════════════════════════════════════════════════════
-   10. QR CODES
-══════════════════════════════════════════════════════ */
-.qr-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
-.qr-item {
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: var(--r-md); padding: 12px; text-align: center;
-}
-.qi-id   { font-size: var(--fs-md); font-weight: 700; color: var(--accent); margin-bottom: 2px; font-family: var(--font-mono); }
-.qi-name { font-size: 8px; color: var(--text-3); margin-bottom: 8px; line-height: 1.5; }
-.qi-qr   { display: inline-block; background: #fff; padding: 7px; border-radius: 7px; margin-bottom: 6px; }
-.qi-url  { font-size: 7px; color: var(--text-3); word-break: break-all; line-height: 1.4; font-family: var(--font-mono); }
-
-/* ══════════════════════════════════════════════════════
-   11. MODALS & TOASTS
-══════════════════════════════════════════════════════ */
-.modal-bg {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
-  z-index: 200; display: none;
-  align-items: flex-end; justify-content: center;
-}
-.modal-bg.open { display: flex; }
-.modal {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
-  width: 100%; max-width: 500px;
-  max-height: 92vh; overflow-y: auto;
-  padding: 18px 14px 32px;
-  box-shadow: var(--shadow-lg);
-  animation: slideUp .22s cubic-bezier(.4,0,.2,1);
-}
+/* MODAL */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); z-index:200; display:none; align-items:flex-end; justify-content:center; }
+.modal-bg.open { display:flex; }
+.modal { background:var(--surface-1); border:1px solid var(--border); border-radius:var(--r-xl) var(--r-xl) 0 0; width:100%; max-width:500px; max-height:92vh; overflow-y:auto; padding:18px 14px 32px; box-shadow:var(--shadow-lg); animation:slideUp .22s cubic-bezier(.4,0,.2,1); }
 @keyframes slideUp { from{transform:translateY(60px);opacity:0} to{transform:translateY(0);opacity:1} }
-.modal-handle {
-  width: 34px; height: 4px;
-  background: var(--border); border-radius: 4px;
-  margin: 0 auto 14px;
-}
-.modal-head {
-  font-size: var(--fs-lg); font-weight: 700; margin-bottom: 14px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.modal-close {
-  background: var(--surface-3); border: 1px solid var(--border);
-  color: var(--text-2); width: 28px; height: 28px;
-  border-radius: 50%; cursor: pointer; font-size: 13px;
-  display: flex; align-items: center; justify-content: center;
-  transition: var(--trans);
-}
-.modal-close:hover { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+.modal-handle { width:34px; height:4px; background:var(--border); border-radius:4px; margin:0 auto 14px; }
+.modal-head { font-size:var(--fs-lg); font-weight:700; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
+.modal-close { background:var(--surface-3); border:1px solid var(--border); color:var(--text-2); width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:var(--trans); }
+.modal-close:hover { background:var(--red-dim); border-color:var(--red); color:var(--red); }
 
-#toast {
-  position: fixed; bottom: 20px; left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: var(--surface-1); border: 1px solid var(--border); color: var(--text-1);
-  padding: 10px 18px; border-radius: 28px;
-  font-size: var(--fs-md); font-weight: 600;
-  opacity: 0; transition: opacity .22s, transform .22s;
-  z-index: 999; white-space: nowrap; pointer-events: none;
-  max-width: 88vw; text-align: center; box-shadow: var(--shadow-lg);
-}
-#toast.on   { opacity: 1; transform: translateX(-50%) translateY(0); }
-#toast.ok   { background: var(--green-dim); border-color: var(--green-border); color: var(--green); }
-#toast.err  { background: var(--red-dim);   border-color: var(--red);          color: var(--red); }
-#toast.warn { background: var(--yellow-dim);border-color: rgba(251,191,36,.3); color: var(--yellow); }
+/* TOAST */
+#toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(10px); background:var(--surface-1); border:1px solid var(--border); color:var(--text-1); padding:10px 18px; border-radius:28px; font-size:var(--fs-md); font-weight:600; opacity:0; transition:opacity .22s,transform .22s; z-index:999; white-space:nowrap; pointer-events:none; max-width:88vw; text-align:center; box-shadow:var(--shadow-lg); }
+#toast.on { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.ok { background:var(--green-dim); border-color:var(--green-border); color:var(--green); }
+#toast.err { background:var(--red-dim); border-color:var(--red); color:var(--red); }
+#toast.warn { background:var(--yellow-dim); border-color:rgba(251,191,36,.3); color:var(--yellow); }
 
-/* ══════════════════════════════════════════════════════
-   12. UTILITY CLASSES
-══════════════════════════════════════════════════════ */
-.info-box {
-  background: var(--accent-dim); border: 1px solid var(--accent-border);
-  border-radius: var(--r-md); padding: 11px 13px; margin-bottom: 12px;
-  font-size: var(--fs-sm); color: var(--text-2); line-height: 1.7;
-}
-.info-box strong { color: var(--accent); }
-.warn-box {
-  background: var(--orange-dim); border: 1px solid rgba(251,146,60,.3);
-  border-radius: var(--r-md); padding: 11px 13px; margin-bottom: 12px;
-  font-size: var(--fs-sm); color: var(--orange); line-height: 1.7;
-}
-.empty { text-align: center; padding: 28px; color: var(--text-3); }
-.empty i { font-size: 28px; display: block; margin-bottom: 6px; font-style: normal; }
-.divider { height: 1px; background: var(--border); margin: 10px 0; }
+/* UTILITY */
+.info-box { background:var(--accent-dim); border:1px solid var(--accent-border); border-radius:var(--r-md); padding:11px 13px; margin-bottom:12px; font-size:var(--fs-sm); color:var(--text-2); line-height:1.7; }
+.info-box strong { color:var(--accent); }
+.warn-box { background:var(--orange-dim); border:1px solid rgba(251,146,60,.3); border-radius:var(--r-md); padding:11px 13px; margin-bottom:12px; font-size:var(--fs-sm); color:var(--orange); line-height:1.7; }
+.empty { text-align:center; padding:28px; color:var(--text-3); }
+.empty i { font-size:28px; display:block; margin-bottom:6px; font-style:normal; }
 
-/* ══════════════════════════════════════════════════════
-   13. RESPONSIVE — MOBILE
-══════════════════════════════════════════════════════ */
-@media (max-width: 480px) {
-  .panel { padding: 10px 10px 90px; }
-  .f-2col { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .qr-grid { grid-template-columns: 1fr 1fr; }
-  .desktop-only { display: none; }
-  /* Tighter table on small screens */
-  td, th { padding: 7px 6px !important; font-size: 10px !important; }
-  .meter-row { gap: 6px; }
-  .mb-val { font-size: 18px !important; }
-  .stats-row { gap: 6px; }
+/* RESPONSIVE */
+@media (max-width:480px) {
+  .panel { padding:10px 10px 90px; }
+  .f-2col, .f-3col { grid-template-columns:1fr; gap:8px; }
+  .qr-grid { grid-template-columns:1fr; }
+  .desktop-only { display:none; }
+  td, th { padding:7px 6px !important; font-size:10px !important; }
+  .meter-row { gap:6px; }
+  .mb-val { font-size:18px !important; }
+  .stats-row { gap:6px; }
 }
-@media (min-width: 600px) {
-  .sub-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
-  .stats-row { grid-template-columns: repeat(4,1fr); }
-  .qr-grid { grid-template-columns: repeat(3,1fr); }
-}
-
-/* Error console */
-#err-console {
-  position: fixed; bottom: 16px; right: 16px;
-  z-index: 9999; max-width: 280px; display: none;
-}
-#err-console-inner {
-  background: rgba(200,0,0,.92); color: #fff;
-  padding: 13px; border-radius: 8px;
-  font-size: 11px; box-shadow: 0 4px 10px rgba(0,0,0,.3);
-}
-#err-console button {
-  margin-top: 8px; width: 100%;
-  border: none; background: rgba(255,255,255,.2);
-  color: #fff; cursor: pointer; padding: 5px; border-radius: 4px;
+@media (min-width:600px) {
+  .sub-grid { grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); }
+  .stats-row { grid-template-columns:repeat(4,1fr); }
+  .qr-grid { grid-template-columns:repeat(3,1fr); }
+  .f-3col { grid-template-columns:1fr 1fr 1fr; }
 }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════ HEADER ══ -->
+<!-- HEADER -->
 <div class="hdr">
   <div class="hdr-logo">⚡</div>
   <div class="hdr-text">
@@ -642,7 +252,7 @@ tr:hover td { background: var(--surface-2); }
     <div class="hdr-sub" id="hdr-small">กำลังโหลด...</div>
   </div>
   <div class="hdr-right">
-    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="เปลี่ยน Theme">🌙</button>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
     <button class="btn-admin" id="btn-admin" onclick="toggleAdmin()">🔐 ทั่วไป</button>
     <div class="sync-dot" id="sync-dot"></div>
   </div>
@@ -653,36 +263,31 @@ tr:hover td { background: var(--surface-2); }
   <span id="sync-msg">กำลังโหลด...</span>
 </div>
 
-<!-- ══════════════════════════════════ TABS ══ -->
+<!-- TABS -->
 <div class="tabs">
   <div class="tab active" onclick="goTab('entry')"><i>📝</i>บันทึก</div>
   <div class="tab" onclick="goTab('data')"><i>📊</i>ข้อมูล</div>
   <div class="tab admin-tab" style="display:none" onclick="goTab('chart')"><i>📈</i>กราฟ</div>
-  <div class="tab admin-tab" style="display:none" onclick="goTab('qr')"><i>🔲</i>QR Code</div>
+  <div class="tab admin-tab" style="display:none" onclick="goTab('qr')"><i>🔲</i>QR</div>
   <div class="tab admin-tab" style="display:none" onclick="goTab('settings')"><i>⚙️</i>ตั้งค่า</div>
 </div>
 
-<!-- ══════════════════════════════════ BODY ══ -->
 <div class="body">
-
-  <!-- ── ENTRY PANEL ── -->
+  <!-- ENTRY PANEL -->
   <div class="panel active" id="panel-entry">
-    <!-- Sub selector screen -->
     <div id="sub-list-screen">
       <div class="card">
         <div class="card-title">📍 เลือก Substation</div>
         <div class="rec-badge" id="hdr-badge">0 rec</div>
         <div id="zone-areas"></div>
-        <div class="btn-row" style="margin-top:12px;">
+        <div class="btn-row" style="margin-top:12px">
           <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 Refresh</button>
         </div>
       </div>
     </div>
 
-    <!-- Entry form screen (overlay) -->
     <div id="entry-section">
       <button class="back-btn" onclick="backToList()">← กลับ</button>
-
       <div class="sub-banner">
         <div class="sb-icon">🏭</div>
         <div>
@@ -692,7 +297,6 @@ tr:hover td { background: var(--surface-2); }
         </div>
       </div>
 
-      <!-- Previous meter reading -->
       <div class="meter-card" id="meter-summary" style="display:none">
         <div class="card-title">⚡ ค่ามิเตอร์ล่าสุด</div>
         <div class="meter-row">
@@ -713,15 +317,13 @@ tr:hover td { background: var(--surface-2); }
         </div>
       </div>
 
-      <!-- Input form -->
       <div class="card">
         <div class="card-title">📝 บันทึกค่ามิเตอร์ใหม่</div>
         <div class="f-row">
           <label class="f-label">📟 ค่าที่อ่านได้ (kWh สะสม)</label>
-          <input class="f-input kwh-input" type="number" id="in-kwh"
-            placeholder="0.00" step="0.01" inputmode="decimal" oninput="previewUsed()">
+          <input class="f-input kwh-input" type="number" id="in-kwh" placeholder="0.00" step="0.01" inputmode="decimal" oninput="previewUsed()">
         </div>
-        <div id="preview-box" style="display:none;margin-bottom:12px;">
+        <div id="preview-box" style="display:none;margin-bottom:12px">
           <div class="chip-center"><span class="chip chip-green" id="preview-chip">—</span></div>
         </div>
         <div class="f-2col">
@@ -739,30 +341,23 @@ tr:hover td { background: var(--surface-2); }
           <input class="f-input" type="text" id="in-user" placeholder="ชื่อ-นามสกุล" autocomplete="name">
         </div>
         <div class="f-row">
-          <label class="f-label">📌 หมายเหตุ (ถ้ามี)</label>
+          <label class="f-label">📌 หมายเหตุ</label>
           <input class="f-input" type="text" id="in-note" placeholder="—">
         </div>
-        <button class="btn btn-save btn-full" id="save-btn" onclick="saveRecord()">
-          ✅ บันทึกข้อมูลเข้าระบบ
-        </button>
+        <button class="btn btn-save btn-full" id="save-btn" onclick="saveRecord()">✅ บันทึกข้อมูล</button>
       </div>
 
-      <!-- Recent 5 records -->
       <div class="card" id="recent-card" style="display:none">
         <div class="card-title">🕒 5 รายการล่าสุด</div>
         <div class="tbl-wrap">
-          <table>
-            <thead>
-              <tr><th>วันที่</th><th>เวลา</th><th>มิเตอร์</th><th>ใช้ไป</th><th>ผู้บันทึก</th><th></th></tr>
-            </thead>
-            <tbody id="recent-body"></tbody>
-          </table>
+          <table><thead><tr><th>วันที่</th><th>เวลา</th><th>มิเตอร์</th><th>ใช้ไป</th><th>ผู้บันทึก</th><th></th></tr></thead>
+            <tbody id="recent-body"></tbody></table>
         </div>
       </div>
-    </div><!-- /entry-section -->
-  </div><!-- /panel-entry -->
+    </div>
+  </div>
 
-  <!-- ── DATA PANEL ── -->
+  <!-- DATA PANEL -->
   <div class="panel" id="panel-data">
     <div class="stats-row" id="stats-row"></div>
     <div class="card">
@@ -774,7 +369,7 @@ tr:hover td { background: var(--surface-2); }
         </div>
         <div class="f-row">
           <label class="f-label">ผู้บันทึก</label>
-          <input class="f-input" id="fl-user" type="text" placeholder="ค้นหา...">
+          <input class="f-input" id="fl-user" placeholder="ค้นหา...">
         </div>
         <div class="f-row">
           <label class="f-label">จากวันที่</label>
@@ -789,35 +384,26 @@ tr:hover td { background: var(--surface-2); }
         <button class="btn btn-primary btn-sm" onclick="applyFilter()">🔍 กรอง</button>
         <button class="btn btn-ghost btn-sm" onclick="clearFilter()">✖ ล้าง</button>
         <button class="btn btn-yellow btn-sm" onclick="exportExcel()">📥 Excel</button>
-        <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 โหลดใหม่</button>
+        <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 Refresh</button>
       </div>
     </div>
     <div class="card">
       <div class="card-title">📋 รายการทั้งหมด</div>
       <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Sub</th><th>วันที่</th><th>เวลา</th><th>มิเตอร์</th>
-              <th>ใช้ไป</th><th class="desktop-only">ผู้บันทึก</th><th class="desktop-only">หมายเหตุ</th><th></th>
-            </tr>
-          </thead>
-          <tbody id="main-body"></tbody>
-        </table>
+        <table><thead><tr><th>Sub</th><th>วันที่</th><th>เวลา</th><th>มิเตอร์</th><th>ใช้ไป</th><th class="desktop-only">ผู้บันทึก</th><th class="desktop-only">หมายเหตุ</th><th></th></tr></thead>
+          <tbody id="main-body"></tbody></table>
         <div class="empty" id="main-empty" style="display:none"><i>📭</i>ยังไม่มีข้อมูล</div>
       </div>
     </div>
-  </div><!-- /panel-data -->
+  </div>
 
-  <!-- ── CHART PANEL ── -->
+  <!-- CHART PANEL -->
   <div class="panel" id="panel-chart">
     <div class="card">
       <div class="card-title">📈 กราฟการใช้ไฟ (kWh/รอบ)</div>
       <div class="f-row">
         <label class="f-label">เลือก Substation</label>
-        <select class="f-input" id="chart-sub" onchange="renderChart()">
-          <option value="">เลือก Sub...</option>
-        </select>
+        <select class="f-input" id="chart-sub" onchange="renderChart()"><option value="">เลือก Sub...</option></select>
       </div>
       <div id="chart-area"></div>
     </div>
@@ -827,41 +413,34 @@ tr:hover td { background: var(--surface-2); }
     </div>
   </div>
 
-  <!-- ── QR PANEL ── -->
+  <!-- QR PANEL -->
   <div class="panel" id="panel-qr">
     <div class="card">
       <div class="card-title">🔲 QR Code ทุก Substation</div>
-      <div class="info-box">
-        <strong>Base URL:</strong>
-        <span style="font-family:var(--font-mono);font-size:9px;color:var(--accent);" id="qr-url-preview">—</span>
-        <br><small style="color:var(--text-3)">สแกน QR เปิดตู้ได้ทันที ไม่ต้องตั้งค่า</small>
-      </div>
+      <div class="info-box"><strong>Base URL:</strong> <span style="font-family:var(--font-mono);font-size:9px;color:var(--accent)" id="qr-url-preview">—</span><br><small style="color:var(--text-3)">สแกน QR เปิดตู้ได้ทันที</small></div>
       <div class="qr-grid" id="qr-grid"></div>
     </div>
   </div>
 
-  <!-- ── SETTINGS PANEL ── -->
+  <!-- SETTINGS PANEL -->
   <div class="panel" id="panel-settings">
     <div class="card">
       <div class="card-title">☁️ Google Sheets API</div>
-      <div class="info-box">
-        <strong>API URL ถูก lock ไว้ในโค้ด</strong><br>
-        ทุกอุปกรณ์ sync ข้อมูลกับ Google Sheets อัตโนมัติ
-      </div>
-      <div id="api-status" style="display:none;margin-bottom:10px;"></div>
+      <div class="info-box"><strong>API URL ถูก lock</strong><br>ทุกอุปกรณ์ sync อัตโนมัติ</div>
+      <div id="api-status" style="display:none;margin-bottom:10px"></div>
       <div class="btn-row">
-        <button class="btn btn-primary btn-sm" onclick="testConn()">🔌 ทดสอบการเชื่อมต่อ</button>
-        <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 โหลดจาก Sheets</button>
+        <button class="btn btn-primary btn-sm" onclick="testConn()">🔌 ทดสอบ</button>
+        <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 โหลด</button>
       </div>
     </div>
 
     <div class="card">
       <div class="card-title">➕ เพิ่ม Substation</div>
-      <div class="f-2col">
+      <div class="f-3col">
         <div class="f-row"><label class="f-label">Sub ID</label><input class="f-input" id="new-id" placeholder="SUB-40"></div>
-        <div class="f-row"><label class="f-label">หน่วย</label><input class="f-input" id="new-unit" value="kWh"></div>
+        <div class="f-row"><label class="f-label">ชื่อ</label><input class="f-input" id="new-name" placeholder="NO.40"></div>
+        <div class="f-row"><label class="f-label">ทศนิยม</label><input class="f-input" type="number" id="new-decimal" value="2" min="0" max="4"></div>
       </div>
-      <div class="f-row"><label class="f-label">ชื่อ / Location</label><input class="f-input" id="new-name" placeholder="ชื่อพื้นที่"></div>
       <div class="f-row"><label class="f-label">Zone</label><input class="f-input" id="new-zone" placeholder="Custom"></div>
       <button class="btn btn-primary btn-full" onclick="addSub()">➕ เพิ่ม Substation</button>
     </div>
@@ -872,33 +451,26 @@ tr:hover td { background: var(--surface-2); }
     </div>
 
     <div class="card" style="border-color:rgba(248,113,113,.3)">
-      <div class="card-title" style="color:var(--orange)">⚠️ Backup & Data</div>
+      <div class="card-title" style="color:var(--orange)">⚠️ Backup</div>
       <div class="btn-row">
         <button class="btn btn-yellow btn-sm" onclick="exportExcel()">📥 Excel</button>
         <button class="btn btn-ghost btn-sm" onclick="exportJSON()">💾 JSON</button>
         <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-inp').click()">📂 Import</button>
-        <button class="btn btn-danger btn-sm" onclick="clearCache()">🗑 ล้าง Cache</button>
+        <button class="btn btn-danger btn-sm" onclick="clearCache()">🗑 ล้าง</button>
       </div>
       <input type="file" id="import-inp" accept=".json" style="display:none" onchange="doImport(event)">
     </div>
   </div>
+</div>
 
-</div><!-- /body -->
-
-<!-- ══════════════════════════════════ EDIT MODAL ══ -->
+<!-- EDIT MODAL -->
 <div class="modal-bg" id="edit-modal" onclick="closeEditIf(event)">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-head">
-      ✏️ แก้ไขรายการ
-      <button class="modal-close" onclick="closeEdit()">✕</button>
-    </div>
+    <div class="modal-head">✏️ แก้ไขรายการ<button class="modal-close" onclick="closeEdit()">✕</button></div>
     <div class="warn-box">⚠️ การแก้ไขค่ามิเตอร์จะกระทบค่า "ใช้ไป" ของรายการถัดไป</div>
     <div class="f-row"><label class="f-label">Substation</label><select class="f-input" id="edit-sub"></select></div>
-    <div class="f-row">
-      <label class="f-label">ค่ามิเตอร์ (kWh สะสม)</label>
-      <input class="f-input kwh-input" type="number" id="edit-kwh" step="0.01" inputmode="decimal">
-    </div>
+    <div class="f-row"><label class="f-label">ค่ามิเตอร์ (kWh สะสม)</label><input class="f-input kwh-input" type="number" id="edit-kwh" step="0.01" inputmode="decimal"></div>
     <div class="f-2col">
       <div class="f-row"><label class="f-label">วันที่</label><input class="f-input" type="date" id="edit-date"></div>
       <div class="f-row"><label class="f-label">เวลา</label><input class="f-input" type="time" id="edit-time"></div>
@@ -906,129 +478,133 @@ tr:hover td { background: var(--surface-2); }
     <div class="f-row"><label class="f-label">ผู้บันทึก</label><input class="f-input" type="text" id="edit-user"></div>
     <div class="f-row"><label class="f-label">หมายเหตุ</label><input class="f-input" type="text" id="edit-note"></div>
     <div class="btn-row">
-      <button class="btn btn-save btn-full" onclick="saveEdit()">✅ บันทึกการแก้ไข</button>
+      <button class="btn btn-save btn-full" onclick="saveEdit()">✅ บันทึก</button>
       <button class="btn btn-ghost" onclick="closeEdit()" style="padding:11px 20px">ยกเลิก</button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
-<div id="err-console"><div id="err-console-inner">
-  <strong>⚠️ พบข้อผิดพลาด</strong>
-  <div id="err-msg" style="margin-top:5px;word-wrap:break-word"></div>
-  <button onclick="document.getElementById('err-console').style.display='none'">ปิด</button>
-</div></div>
 
-<!-- ══════════════════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════════════════ -->
 <script>
-/* ──────────────────────────────────────────────────────
-   CONFIG  (แก้ไขเฉพาะส่วนนี้เมื่อต้องการเปลี่ยน URL)
-────────────────────────────────────────────────────── */
-const API_URL     = 'https://script.google.com/macros/s/AKfycbwO5gUH2c8rcl-aSFuE2s32IxpgRh5ES3LFa1wUz3dNKfh33Kn11R9AJ5ZpwzrgD_WZnA/exec';
+/* ══════════════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════════════ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbwO5gUH2c8rcl-aSFuE2s32IxpgRh5ES3LFa1wUz3dNKfh33Kn11R9AJ5ZpwzrgD_WZnA/exec';
 const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
-const ADMIN_PASS  = '1234';
+const ADMIN_PASS = '1234';
 
-/* ──────────────────────────────────────────────────────
-   DEFAULT SUBSTATIONS (fallback เมื่อ offline)
-────────────────────────────────────────────────────── */
 const INIT_SUBS = [
-  {id:'SUB-02',name:'NO.2',   zone:'2-5 UA Shop',    unit:'kWh'},
-  {id:'SUB-03',name:'NO.3',   zone:'2-5 UA Shop',    unit:'kWh'},
-  {id:'SUB-04',name:'NO.4',   zone:'2-5 UA Shop',    unit:'kWh'},
-  {id:'SUB-05',name:'NO.5',   zone:'2-5 UA Shop',    unit:'kWh'},
-  {id:'SUB-06',name:'NO.6',   zone:'6-12 Power Zone',unit:'kWh'},
-  {id:'SUB-07',name:'NO.7',   zone:'6-12 Power Zone',unit:'kWh'},
-  {id:'SUB-08',name:'NO.8',   zone:'6-12 Power Zone',unit:'kWh'},
-  {id:'SUB-09',name:'NO.9',   zone:'6-12 Power Zone',unit:'kWh'},
-  {id:'SUB-10',name:'NO.10',  zone:'6-12 Power Zone',unit:'kWh'},
-  {id:'SUB-11',name:'NO.11',  zone:'6-12 Power Zone',unit:'kWh'},
-  {id:'SUB-12',name:'NO.12',  zone:'6-12 Power Zone',unit:'kWh'},
-  {id:'SUB-15',name:'NO.15',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-18',name:'NO.18',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-19',name:'NO.19',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-20',name:'NO.20',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-24',name:'NO.24',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-27',name:'NO.27',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-28',name:'NO.28',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-29',name:'NO.29',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-30',name:'NO.30',  zone:'Body Shop',       unit:'kWh'},
-  {id:'SUB-21',name:'NO.21',  zone:'21-22 La Shop',  unit:'kWh'},
-  {id:'SUB-22',name:'NO.22',  zone:'21-22 La Shop',  unit:'kWh'},
-  {id:'SUB-31',name:'NO.31',  zone:'31 Head Office', unit:'kWh'},
-  {id:'SUB-33',name:'NO.33/35',zone:'Frame Shop',    unit:'kWh'},
-  {id:'SUB-34',name:'NO.34',  zone:'Frame Shop',      unit:'kWh'},
-  {id:'SUB-36',name:'NO.36',  zone:'Frame Shop',      unit:'kWh'},
-  {id:'SUB-37',name:'NO.37',  zone:'Frame Shop',      unit:'kWh'},
-  {id:'SUB-38',name:'NO.38',  zone:'38 Paint Shop',  unit:'kWh'},
+  {id:'SUB-02',name:'NO.2',zone:'2-5 UA Shop',decimal:2},
+  {id:'SUB-03',name:'NO.3',zone:'2-5 UA Shop',decimal:2},
+  {id:'SUB-04',name:'NO.4',zone:'2-5 UA Shop',decimal:2},
+  {id:'SUB-05',name:'NO.5',zone:'2-5 UA Shop',decimal:2},
+  {id:'SUB-06',name:'NO.6',zone:'6-12 Power Zone',decimal:2},
+  {id:'SUB-07',name:'NO.7',zone:'6-12 Power Zone',decimal:2},
+  {id:'SUB-08',name:'NO.8',zone:'6-12 Power Zone',decimal:2},
+  {id:'SUB-09',name:'NO.9',zone:'6-12 Power Zone',decimal:2},
+  {id:'SUB-10',name:'NO.10',zone:'6-12 Power Zone',decimal:2},
+  {id:'SUB-11',name:'NO.11',zone:'6-12 Power Zone',decimal:2},
+  {id:'SUB-12',name:'NO.12',zone:'6-12 Power Zone',decimal:2},
+  {id:'SUB-15',name:'NO.15',zone:'Body Shop',decimal:2},
+  {id:'SUB-18',name:'NO.18',zone:'Body Shop',decimal:2},
+  {id:'SUB-19',name:'NO.19',zone:'Body Shop',decimal:2},
+  {id:'SUB-20',name:'NO.20',zone:'Body Shop',decimal:2},
+  {id:'SUB-24',name:'NO.24',zone:'Body Shop',decimal:2},
+  {id:'SUB-27',name:'NO.27',zone:'Body Shop',decimal:2},
+  {id:'SUB-28',name:'NO.28',zone:'Body Shop',decimal:2},
+  {id:'SUB-29',name:'NO.29',zone:'Body Shop',decimal:2},
+  {id:'SUB-30',name:'NO.30',zone:'Body Shop',decimal:2},
+  {id:'SUB-21',name:'NO.21',zone:'21-22 La Shop',decimal:2},
+  {id:'SUB-22',name:'NO.22',zone:'21-22 La Shop',decimal:2},
+  {id:'SUB-31',name:'NO.31',zone:'31 Head Office',decimal:2},
+  {id:'SUB-33',name:'NO.33/35',zone:'Frame Shop',decimal:2},
+  {id:'SUB-34',name:'NO.34',zone:'Frame Shop',decimal:2},
+  {id:'SUB-36',name:'NO.36',zone:'Frame Shop',decimal:2},
+  {id:'SUB-37',name:'NO.37',zone:'Frame Shop',decimal:2},
+  {id:'SUB-38',name:'NO.38',zone:'38 Paint Shop',decimal:2},
 ];
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    STATE
-────────────────────────────────────────────────────── */
-let subs         = jLoad('subs')    || INIT_SUBS;
-let records      = jLoad('records') || [];
-let appMode      = 'basic';
-let activeSub    = null;
+══════════════════════════════════════════════════════ */
+let subs = jLoad('subs') || INIT_SUBS;
+let records = jLoad('records') || [];
+let filteredRecords = null; // 🔧 NEW: Store filtered records for export
+let appMode = 'basic';
+let activeSub = null;
 let editRecordId = null;
-let isConnected  = false;
+let isConnected = false;
 
-/* ──────────────────────────────────────────────────────
-   UTILS — localStorage, date/time formatting
-────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════════ */
 function jLoad(k) {
   try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; }
 }
 function persist() {
-  localStorage.setItem('subs',    JSON.stringify(subs));
+  localStorage.setItem('subs', JSON.stringify(subs));
   localStorage.setItem('records', JSON.stringify(records));
 }
 
-// FIX: รองรับทั้งรูปแบบ YYYY-MM-DD และ ISO String จาก Google Sheets
+// 🔧 FIX: Better date formatting - handles both YYYY-MM-DD and ISO strings
 function fmtDate(d) {
   if (!d) return '—';
-  
-  // ถ้าข้อมูลส่งมาเป็น ISO String หรือมีตัว T ติดมาด้วย (จาก Sheets API)
+  let dateObj;
   if (String(d).includes('T')) {
-    const dateObj = new Date(d);
-    if (!isNaN(dateObj.getTime())) {
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const year = dateObj.getFullYear();
-      return `${day}/${month}/${year}`; // ออกมาเป็น DD/MM/YYYY
-    }
+    dateObj = new Date(d);
+  } else {
+    const [y, m, day] = String(d).split('-');
+    if (!y || !m || !day) return String(d);
+    dateObj = new Date(y, m - 1, day);
   }
-  
-  // Fallback สำหรับข้อมูลแบบเดิมในเครื่อง (YYYY-MM-DD)
-  const p = String(d).split('-');
-  if (p.length !== 3) return String(d);
-  return `${p[2]}/${p[1]}/${p[0]}`; // ออกมาเป็น DD/MM/YYYY
+  if (isNaN(dateObj.getTime())) return String(d);
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const yy = dateObj.getFullYear();
+  return `${dd}/${mm}/${yy}`;
 }
 
-// FIX: รองรับทั้งรูปแบบ HH:mm และ ISO String ยุคปี 1899 จาก Google Sheets
+// 🔧 FIX: Better time formatting
 function fmtTime(t) {
   if (!t) return '—';
-  
-  // ถ้าข้อมูลส่งมาเป็นระบบ Date/Time Object (จาก Sheets API)
   if (String(t).includes('T')) {
     const dateObj = new Date(t);
     if (!isNaN(dateObj.getTime())) {
-      const hours = String(dateObj.getHours()).padStart(2, '0');
-      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-      return `${hours}:${minutes}`; // ออกมาเป็น HH:mm
+      return `${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
     }
   }
-  
-  return String(t).slice(0, 5); // Fallback สำหรับ "HH:mm" ปกติ
+  return String(t).slice(0, 5);
+}
+
+// 🔧 NEW: Format number with specific decimal places
+function fmtNum(val, subId) {
+  const sub = subs.find(s => s.id === subId);
+  const decimal = sub && sub.decimal !== undefined ? sub.decimal : 2;
+  return parseFloat(val || 0).toFixed(decimal);
+}
+
+// 🔧 NEW: Get short date for chart labels (DD/MM)
+function fmtShortDate(d) {
+  if (!d) return '—';
+  let dateObj;
+  if (String(d).includes('T')) {
+    dateObj = new Date(d);
+  } else {
+    const [y, m, day] = String(d).split('-');
+    if (!y || !m || !day) return String(d);
+    dateObj = new Date(y, m - 1, day);
+  }
+  if (isNaN(dateObj.getTime())) return String(d);
+  return `${String(dateObj.getDate()).padStart(2,'0')}/${String(dateObj.getMonth()+1).padStart(2,'0')}`;
 }
 
 function setNow() {
   const n = new Date();
-  const el_date = document.getElementById('in-date');
-  const el_time = document.getElementById('in-time');
-  if (el_date) el_date.value = n.toISOString().split('T')[0];
-  if (el_time) el_time.value = n.toTimeString().slice(0, 5);
+  const elDate = document.getElementById('in-date');
+  const elTime = document.getElementById('in-time');
+  if (elDate) elDate.value = n.toISOString().split('T')[0];
+  if (elTime) elTime.value = n.toTimeString().slice(0, 5);
 }
 
 function getLastKwh(subId) {
@@ -1044,9 +620,9 @@ function getSubRecs(subId) {
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 }
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    THEME
-────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 function initTheme() {
   const saved = localStorage.getItem('theme');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1066,9 +642,9 @@ function toggleTheme() {
   setTheme(nxt);
 }
 
-/* ──────────────────────────────────────────────────────
-   API — Google Sheets
-────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   API
+══════════════════════════════════════════════════════ */
 async function apiGet() {
   const res = await fetch(API_URL + '?action=getAll');
   if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1077,11 +653,11 @@ async function apiGet() {
 
 async function apiPost(body) {
   const ctrl = new AbortController();
-  const tid  = setTimeout(() => ctrl.abort(), 12000);
+  const tid = setTimeout(() => ctrl.abort(), 12000);
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
-      body:   JSON.stringify(body),
+      body: JSON.stringify(body),
       signal: ctrl.signal
     });
     clearTimeout(tid);
@@ -1094,18 +670,24 @@ async function apiPost(body) {
 }
 
 function setSyncStatus(status, msg) {
-  const dot  = document.getElementById('sync-dot');
-  const ban  = document.getElementById('sync-banner');
-  const ico  = document.getElementById('sync-icon');
+  const dot = document.getElementById('sync-dot');
+  const ban = document.getElementById('sync-banner');
+  const ico = document.getElementById('sync-icon');
   const bmsg = document.getElementById('sync-msg');
   dot.className = 'sync-dot ' + (status === 'ok' ? 'ok' : status === 'busy' ? 'busy' : 'err');
   if (status === 'busy') {
-    ban.className = 'sync-banner show loading'; ico.textContent = '⏳'; bmsg.textContent = msg || 'กำลัง sync...';
+    ban.className = 'sync-banner show loading';
+    ico.textContent = '⏳';
+    bmsg.textContent = msg || 'กำลัง sync...';
   } else if (status === 'error') {
-    ban.className = 'sync-banner show error'; ico.textContent = '❌'; bmsg.textContent = msg || 'เชื่อมต่อไม่ได้';
+    ban.className = 'sync-banner show error';
+    ico.textContent = '❌';
+    bmsg.textContent = msg || 'เชื่อมต่อไม่ได้';
     setTimeout(() => { ban.className = 'sync-banner'; }, 5000);
   } else {
-    ban.className = 'sync-banner show success'; ico.textContent = '✅'; bmsg.textContent = msg || 'Sync สำเร็จ';
+    ban.className = 'sync-banner show success';
+    ico.textContent = '✅';
+    bmsg.textContent = msg || 'Sync สำเร็จ';
     setTimeout(() => { ban.className = 'sync-banner'; }, 2500);
   }
 }
@@ -1116,9 +698,17 @@ async function loadFromServer() {
     const data = await apiGet();
     if (!data || data.error) throw new Error(data ? data.error : 'No Response');
     if (data.records) records = data.records.map(r => ({
-      ...r, kwh: parseFloat(r.kwh) || 0, used: parseFloat(r.used) || 0
+      ...r,
+      kwh: parseFloat(r.kwh) || 0,
+      used: parseFloat(r.used) || 0
     }));
-    if (data.subs && data.subs.length > 0) subs = data.subs;
+    if (data.subs && data.subs.length > 0) {
+      // 🔧 MIGRATION: Add decimal field to old subs
+      subs = data.subs.map(s => ({
+        ...s,
+        decimal: s.decimal !== undefined ? s.decimal : 2
+      }));
+    }
     persist();
     isConnected = true;
     setSyncStatus('ok', `โหลดสำเร็จ — ${records.length} records`);
@@ -1127,7 +717,7 @@ async function loadFromServer() {
   } catch(e) {
     isConnected = false;
     setSyncStatus('error', 'โหลดไม่ได้: ' + e.message);
-    document.getElementById('hdr-small').textContent = 'ใช้ข้อมูล Offline ภายในเครื่อง';
+    document.getElementById('hdr-small').textContent = 'ใช้ข้อมูล Offline';
   }
 }
 
@@ -1139,40 +729,36 @@ async function testConn() {
     const data = await apiGet();
     if (data.error) throw new Error(data.error);
     setSyncStatus('ok', 'เชื่อมต่อสำเร็จ');
-    box.innerHTML = `<div class="info-box">✅ เชื่อมต่อสำเร็จ — ${records.length} records ใน Sheets</div>`;
+    box.innerHTML = `<div class="info-box">✅ เชื่อมต่อสำเร็จ — ${records.length} records</div>`;
   } catch(e) {
     setSyncStatus('error', 'ล้มเหลว');
     box.innerHTML = `<div class="warn-box">❌ ${e.message}</div>`;
   }
 }
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    INIT
-────────────────────────────────────────────────────── */
-window.onerror = function(msg, url, line) {
-  const box = document.getElementById('err-console');
-  document.getElementById('err-msg').textContent = msg + ' (บรรทัด ' + line + ')';
-  box.style.display = 'block';
-  return false;
-};
-
+══════════════════════════════════════════════════════ */
 function init() {
   initTheme();
   setNow();
   renderAll();
   document.getElementById('qr-url-preview').textContent = QR_BASE_URL + '?sub=SUB-XX';
-
-  // Auto-select sub from QR ?sub=param
+  
   const p = new URLSearchParams(location.search).get('sub');
   if (p) {
     goTab('entry');
     setTimeout(() => {
       const found = subs.find(s => s.id === p.toUpperCase());
-      if (found) { selectSub(found.id); toast('📍 เปิด ' + found.id + ' จาก QR', 'ok'); }
-      else toast('ไม่พบ Sub: ' + p, 'err');
+      if (found) {
+        selectSub(found.id);
+        toast('📍 เปิด ' + found.id + ' จาก QR', 'ok');
+      } else {
+        toast('ไม่พบ Sub: ' + p, 'err');
+      }
     }, 200);
   }
-
+  
   loadFromServer();
 }
 
@@ -1182,26 +768,31 @@ function renderAll() {
   renderStats();
   populateDDs();
   updateBadge();
-  if (activeSub) { updateMeterSummary(); renderRecent(); }
+  if (activeSub) {
+    updateMeterSummary();
+    renderRecent();
+  }
 }
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    ADMIN & TABS
-────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 function toggleAdmin() {
   const btn = document.getElementById('btn-admin');
   if (appMode === 'basic') {
     const pwd = prompt('🔐 รหัสผ่านผู้ดูแลระบบ:');
     if (pwd === ADMIN_PASS) {
       appMode = 'admin';
-      btn.textContent = '🔓 แอดมิน'; btn.classList.add('on');
+      btn.textContent = '🔓 แอดมิน';
+      btn.classList.add('on');
       toast('เข้าสู่โหมดแอดมิน', 'ok');
     } else if (pwd !== null) {
       toast('รหัสผ่านไม่ถูกต้อง', 'err');
     }
   } else {
     appMode = 'basic';
-    btn.textContent = '🔐 ทั่วไป'; btn.classList.remove('on');
+    btn.textContent = '🔐 ทั่วไป';
+    btn.classList.remove('on');
     toast('กลับโหมดทั่วไป');
     goTab('entry');
   }
@@ -1216,20 +807,23 @@ function goTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   document.querySelectorAll('.tab')[TAB_ORDER.indexOf(name)].classList.add('active');
-  if (name === 'data')     { renderData(); renderStats(); }
-  if (name === 'chart')    { populateDDs(); renderChart(); renderAllChart(); }
-  if (name === 'qr')       { renderQR(); }
+  if (name === 'data') { renderData(); renderStats(); }
+  if (name === 'chart') { populateDDs(); renderChart(); renderAllChart(); }
+  if (name === 'qr') { renderQR(); }
   if (name === 'settings') { renderSubList(); }
 }
 
-/* ──────────────────────────────────────────────────────
-   ZONE AREAS & SUB SELECTION
-────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   ZONES & SUB SELECTION
+══════════════════════════════════════════════════════ */
 function renderZoneAreas() {
   const container = document.getElementById('zone-areas');
   container.innerHTML = '';
   const groups = {};
-  subs.forEach(s => { if (!groups[s.zone]) groups[s.zone] = []; groups[s.zone].push(s); });
+  subs.forEach(s => {
+    if (!groups[s.zone]) groups[s.zone] = [];
+    groups[s.zone].push(s);
+  });
   for (const zone in groups) {
     const block = document.createElement('div');
     block.className = 'zone-block';
@@ -1238,7 +832,7 @@ function renderZoneAreas() {
     grid.className = 'sub-grid';
     groups[zone].forEach(s => {
       const hasData = records.some(r => r.subId === s.id);
-      const isSel   = activeSub && activeSub.id === s.id;
+      const isSel = activeSub && activeSub.id === s.id;
       const d = document.createElement('div');
       d.className = 'sub-card' + (isSel ? ' sel' : '') + (hasData ? ' has-data' : '');
       d.innerHTML = `<div class="sc-dot"></div><div class="sc-id">${s.id}</div><div class="sc-name">${s.name}</div>`;
@@ -1253,27 +847,22 @@ function renderZoneAreas() {
 function selectSub(subId) {
   activeSub = subs.find(s => s.id === subId);
   if (!activeSub) return;
-
+  
   document.getElementById('sub-list-screen').style.display = 'none';
   document.getElementById('entry-section').style.display = 'block';
-
-  document.getElementById('banner-id').textContent   = activeSub.id;
+  
+  document.getElementById('banner-id').textContent = activeSub.id;
   document.getElementById('banner-name').textContent = `${activeSub.name} · ${activeSub.zone}`;
-
-  document.getElementById('in-kwh').value  = '';
+  
+  document.getElementById('in-kwh').value = '';
   document.getElementById('in-note').value = '';
   document.getElementById('preview-box').style.display = 'none';
   setNow();
-
-  // Update save button based on connection state
+  
   const saveBtn = document.getElementById('save-btn');
-  if (!isConnected) {
-    saveBtn.innerHTML = '⚠️ บันทึก (Offline — Sync เมื่อออนไลน์)';
-  } else {
-    saveBtn.innerHTML = '✅ บันทึกข้อมูลเข้าระบบ';
-  }
+  saveBtn.innerHTML = isConnected ? '✅ บันทึกข้อมูล' : '⚠️ บันทึก (Offline)';
   saveBtn.disabled = false;
-
+  
   updateMeterSummary();
   renderRecent();
   renderZoneAreas();
@@ -1289,32 +878,39 @@ function backToList() {
 function updateMeterSummary() {
   if (!activeSub) return;
   const recs = getSubRecs(activeSub.id);
-  const sm   = document.getElementById('meter-summary');
-  if (!recs.length) { sm.style.display = 'none'; return; }
+  const sm = document.getElementById('meter-summary');
+  if (!recs.length) {
+    sm.style.display = 'none';
+    return;
+  }
   sm.style.display = 'block';
   const last = recs[recs.length - 1];
   const prev = recs.length > 1 ? recs[recs.length - 2] : null;
-  document.getElementById('last-reading').textContent = parseFloat(last.kwh).toFixed(2);
-  document.getElementById('prev-reading').textContent = prev ? parseFloat(prev.kwh).toFixed(2) : '—';
-  document.getElementById('last-used').textContent    = parseFloat(last.used || 0).toFixed(2);
+  document.getElementById('last-reading').textContent = fmtNum(last.kwh, activeSub.id);
+  document.getElementById('prev-reading').textContent = prev ? fmtNum(prev.kwh, activeSub.id) : '—';
+  document.getElementById('last-used').textContent = fmtNum(last.used || 0, activeSub.id);
 }
 
 function previewUsed() {
   if (!activeSub) return;
-  const val  = parseFloat(document.getElementById('in-kwh').value);
-  const box  = document.getElementById('preview-box');
+  const val = parseFloat(document.getElementById('in-kwh').value);
+  const box = document.getElementById('preview-box');
   const chip = document.getElementById('preview-chip');
-  if (isNaN(val) || val <= 0) { box.style.display = 'none'; return; }
+  if (isNaN(val) || val <= 0) {
+    box.style.display = 'none';
+    return;
+  }
   const lastKwh = getLastKwh(activeSub.id);
   box.style.display = 'block';
   if (lastKwh === null) {
-    chip.className = 'chip chip-green'; chip.textContent = '📌 บันทึกครั้งแรกของ Sub นี้';
+    chip.className = 'chip chip-green';
+    chip.textContent = '📌 บันทึกครั้งแรกของ Sub นี้';
   } else {
     const diff = val - lastKwh;
     chip.className = diff >= 0 ? 'chip chip-green' : 'chip chip-orange';
     chip.textContent = diff >= 0
-      ? `⚡ ใช้ไปรอบนี้: +${diff.toFixed(2)} kWh`
-      : `⚠️ ค่าน้อยกว่าครั้งก่อน (${lastKwh})`;
+      ? `⚡ ใช้ไปรอบนี้: +${fmtNum(diff, activeSub.id)} kWh`
+      : `⚠️ ค่าน้อยกว่าครั้งก่อน (${fmtNum(lastKwh, activeSub.id)})`;
   }
 }
 
@@ -1323,65 +919,73 @@ function renderRecent() {
   const recs = getSubRecs(activeSub.id).slice(-5).reverse();
   const card = document.getElementById('recent-card');
   const body = document.getElementById('recent-body');
-  if (!recs.length) { card.style.display = 'none'; return; }
+  if (!recs.length) {
+    card.style.display = 'none';
+    return;
+  }
   card.style.display = 'block';
   body.innerHTML = recs.map(r => `<tr>
     <td>${fmtDate(r.date)}</td>
     <td>${fmtTime(r.time)}</td>
-    <td class="td-kwh">${parseFloat(r.kwh).toFixed(2)}</td>
-    <td class="td-used">${parseFloat(r.used || 0).toFixed(2)}</td>
+    <td class="td-kwh">${fmtNum(r.kwh, activeSub.id)}</td>
+    <td class="td-used">${fmtNum(r.used || 0, activeSub.id)}</td>
     <td>${r.user || '—'}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="openEdit('${r.id}')">✏️</button></td>
   </tr>`).join('');
 }
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    SAVE RECORD
-────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 async function saveRecord() {
   if (!activeSub) return toast('เลือก Substation ก่อน', 'err');
-  const kwh  = parseFloat(document.getElementById('in-kwh').value);
+  const kwh = parseFloat(document.getElementById('in-kwh').value);
   if (isNaN(kwh) || kwh < 0) return toast('กรอกค่ามิเตอร์ด้วย', 'err');
   const user = document.getElementById('in-user').value.trim();
   if (!user) return toast('กรอกชื่อผู้บันทึกด้วย', 'err');
   const date = document.getElementById('in-date').value;
   if (!date) return toast('เลือกวันที่ด้วย', 'err');
-
+  
   const lastKwh = getLastKwh(activeSub.id);
   if (lastKwh !== null && kwh < lastKwh) {
     if (!confirm(`ค่าที่กรอก (${kwh}) น้อยกว่าครั้งก่อน (${lastKwh})\nบันทึกต่อหรือไม่?`)) return;
   }
-
-  const now  = new Date();
+  
+  const now = new Date();
   const used = lastKwh !== null ? kwh - lastKwh : 0;
-  const rec  = {
-    id:       `REC-${now.getTime()}-${Math.floor(Math.random() * 1000)}`,
-    subId:    activeSub.id,
-    subName:  activeSub.name,
-    zone:     activeSub.zone,
+  const rec = {
+    id: `REC-${now.getTime()}-${Math.floor(Math.random() * 1000)}`,
+    subId: activeSub.id,
+    subName: activeSub.name,
+    zone: activeSub.zone,
     date,
-    time:     document.getElementById('in-time').value,
-    kwh, used, user,
-    note:     document.getElementById('in-note').value || '',
-    ts:       now.toISOString(),
+    time: document.getElementById('in-time').value,
+    kwh,
+    used,
+    user,
+    note: document.getElementById('in-note').value || '',
+    ts: now.toISOString(),
     editedTs: ''
   };
-
+  
   records.push(rec);
   persist();
-  toast(`✅ บันทึกแล้ว — ใช้ไป ${used.toFixed(2)} kWh`, 'ok');
-
-  document.getElementById('in-kwh').value  = '';
+  toast(`✅ บันทึกแล้ว — ใช้ไป ${fmtNum(used, activeSub.id)} kWh`, 'ok');
+  
+  document.getElementById('in-kwh').value = '';
   document.getElementById('in-note').value = '';
   document.getElementById('preview-box').style.display = 'none';
   setNow();
-  updateMeterSummary(); renderRecent(); renderZoneAreas(); updateBadge();
-
+  updateMeterSummary();
+  renderRecent();
+  renderZoneAreas();
+  updateBadge();
+  
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
   btn.textContent = '⏳ กำลัง sync...';
   setSyncStatus('busy', 'กำลังบันทึกลง Google Sheets...');
-
+  
   try {
     const res = await apiPost({ action: 'saveRecord', record: rec });
     if (res && (res.success === true || res.result === 'success')) {
@@ -1394,45 +998,54 @@ async function saveRecord() {
     toast('⚠️ บันทึกในเครื่องแล้ว แต่ Sync ยังไม่สำเร็จ', 'warn');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '✅ บันทึกข้อมูลเข้าระบบ';
+    btn.innerHTML = '✅ บันทึกข้อมูล';
   }
 }
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    EDIT / DELETE
-────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 function openEdit(id) {
-  const r = records.find(x => x.id === id); if (!r) return;
+  const r = records.find(x => x.id === id);
+  if (!r) return;
   editRecordId = id;
   document.getElementById('edit-sub').innerHTML = subs.map(s =>
     `<option value="${s.id}" ${s.id === r.subId ? 'selected' : ''}>${s.id} — ${s.name}</option>`
   ).join('');
-  document.getElementById('edit-kwh').value  = r.kwh;
+  document.getElementById('edit-kwh').value = r.kwh;
   document.getElementById('edit-date').value = r.date;
   document.getElementById('edit-time').value = r.time || '';
   document.getElementById('edit-user').value = r.user;
   document.getElementById('edit-note').value = r.note || '';
   document.getElementById('edit-modal').classList.add('open');
 }
-function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); editRecordId = null; }
-function closeEditIf(e) { if (e.target.id === 'edit-modal') closeEdit(); }
+
+function closeEdit() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editRecordId = null;
+}
+
+function closeEditIf(e) {
+  if (e.target.id === 'edit-modal') closeEdit();
+}
 
 async function saveEdit() {
-  const r = records.find(x => x.id === editRecordId); if (!r) return;
-  const kwh  = parseFloat(document.getElementById('edit-kwh').value);
+  const r = records.find(x => x.id === editRecordId);
+  if (!r) return;
+  const kwh = parseFloat(document.getElementById('edit-kwh').value);
   const user = document.getElementById('edit-user').value.trim();
   if (isNaN(kwh) || !user) return toast('กรอกให้ครบด้วย', 'err');
-
+  
   const newSubId = document.getElementById('edit-sub').value;
   const oldSubId = r.subId;
-  r.subId    = newSubId; r.kwh = kwh;
-  r.date     = document.getElementById('edit-date').value;
-  r.time     = document.getElementById('edit-time').value;
-  r.user     = user;
-  r.note     = document.getElementById('edit-note').value || '';
+  r.subId = newSubId;
+  r.kwh = kwh;
+  r.date = document.getElementById('edit-date').value;
+  r.time = document.getElementById('edit-time').value;
+  r.user = user;
+  r.note = document.getElementById('edit-note').value || '';
   r.editedTs = new Date().toISOString();
-
-  // Recalculate "used" for affected subs
+  
   [newSubId, oldSubId].filter((v, i, a) => a.indexOf(v) === i).forEach(sid => {
     const chain = getSubRecs(sid);
     chain.forEach((rec, i) => {
@@ -1440,14 +1053,18 @@ async function saveEdit() {
       if (idx >= 0) records[idx].used = i === 0 ? 0 : rec.kwh - chain[i - 1].kwh;
     });
   });
-
-  persist(); closeEdit(); toast('✅ แก้ไขแล้ว', 'ok');
+  
+  persist();
+  closeEdit();
+  toast('✅ แก้ไขแล้ว', 'ok');
   renderAll();
   setSyncStatus('busy', 'กำลังอัปเดต Sheets...');
   try {
     const res = await apiPost({ action: 'updateRecord', record: r });
     setSyncStatus(res.success ? 'ok' : 'error', res.success ? 'อัปเดตสำเร็จ' : (res.error || 'ไม่สำเร็จ'));
-  } catch(e) { setSyncStatus('error', 'Offline'); }
+  } catch(e) {
+    setSyncStatus('error', 'Offline');
+  }
 }
 
 async function deleteRecord(id) {
@@ -1461,31 +1078,43 @@ async function deleteRecord(id) {
       if (idx >= 0) records[idx].used = i === 0 ? 0 : rec.kwh - chain[i - 1].kwh;
     });
   }
-  persist(); toast('ลบแล้ว'); renderAll();
+  persist();
+  toast('ลบแล้ว');
+  renderAll();
   setSyncStatus('busy', 'กำลังลบจาก Sheets...');
   try {
     await apiPost({ action: 'deleteRecord', id: String(id) });
     setSyncStatus('ok', 'ลบสำเร็จ');
-  } catch(e) { setSyncStatus('error', 'Offline'); }
+  } catch(e) {
+    setSyncStatus('error', 'Offline');
+  }
 }
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    DATA TABLE
-────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 function renderData(filtered) {
   const rows = (filtered !== undefined ? filtered : [...records])
     .sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
-  const body  = document.getElementById('main-body');
+  
+  // 🔧 NEW: Store filtered records for export
+  filteredRecords = rows;
+  
+  const body = document.getElementById('main-body');
   const empty = document.getElementById('main-empty');
   if (!body || !empty) return;
-  if (!rows.length) { empty.style.display = 'block'; body.innerHTML = ''; return; }
+  if (!rows.length) {
+    empty.style.display = 'block';
+    body.innerHTML = '';
+    return;
+  }
   empty.style.display = 'none';
   body.innerHTML = rows.map(r => `<tr>
     <td class="td-sub">${r.subId}</td>
     <td>${fmtDate(r.date)}</td>
     <td>${fmtTime(r.time)}</td>
-    <td class="td-kwh">${parseFloat(r.kwh || 0).toFixed(2)}</td>
-    <td class="td-used"><strong>${parseFloat(r.used || 0).toFixed(2)}</strong></td>
+    <td class="td-kwh">${fmtNum(r.kwh, r.subId)}</td>
+    <td class="td-used"><strong>${fmtNum(r.used || 0, r.subId)}</strong></td>
     <td class="desktop-only">${r.user || '—'}</td>
     <td class="desktop-only">${r.note || '—'}</td>
     <td><div class="td-act">
@@ -1501,34 +1130,38 @@ function populateDDs() {
   const cOpts = '<option value="">เลือก Sub...</option>' + subs.map(s =>
     `<option value="${s.id}">${s.id}</option>`).join('');
   document.getElementById('fl-sub').innerHTML = sOpts;
-  const cs = document.getElementById('chart-sub'); if (cs) cs.innerHTML = cOpts;
+  const cs = document.getElementById('chart-sub');
+  if (cs) cs.innerHTML = cOpts;
 }
 
 function applyFilter() {
-  const sub  = document.getElementById('fl-sub').value;
+  const sub = document.getElementById('fl-sub').value;
   const user = document.getElementById('fl-user').value.trim().toLowerCase();
   const from = document.getElementById('fl-from').value;
-  const to   = document.getElementById('fl-to').value;
+  const to = document.getElementById('fl-to').value;
   renderData(records.filter(r => {
-    if (sub  && r.subId !== sub) return false;
+    if (sub && r.subId !== sub) return false;
     if (user && !(r.user || '').toLowerCase().includes(user)) return false;
     if (from && r.date < from) return false;
-    if (to   && r.date > to)   return false;
+    if (to && r.date > to) return false;
     return true;
   }));
 }
+
 function clearFilter() {
-  ['fl-sub','fl-user','fl-from','fl-to'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
+  ['fl-sub', 'fl-user', 'fl-from', 'fl-to'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
   });
+  filteredRecords = null; // 🔧 Clear filtered records
   renderData();
 }
 
 function renderStats() {
-  const total     = records.length;
-  const subsDone  = new Set(records.map(r => r.subId)).size;
-  const today     = new Date().toISOString().split('T')[0];
-  const todayN    = records.filter(r => r.date === today).length;
+  const total = records.length;
+  const subsDone = new Set(records.map(r => r.subId)).size;
+  const today = new Date().toISOString().split('T')[0];
+  const todayN = records.filter(r => r.date === today).length;
   const totalUsed = records.reduce((a, r) => a + (parseFloat(r.used) || 0), 0);
   document.getElementById('stats-row').innerHTML = `
     <div class="stat"><div class="stat-val">${total}</div><div class="stat-lbl">Records ทั้งหมด</div></div>
@@ -1536,26 +1169,33 @@ function renderStats() {
     <div class="stat"><div class="stat-val">${todayN}</div><div class="stat-lbl">บันทึกวันนี้</div></div>
     <div class="stat"><div class="stat-val" style="color:var(--green)">${Math.round(totalUsed).toLocaleString()}</div><div class="stat-lbl">รวมใช้ไฟ (kWh)</div></div>`;
 }
+
 function updateBadge() {
   document.getElementById('hdr-badge').textContent = records.length + ' rec';
 }
 
-/* ──────────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════
    CHARTS
-────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 function renderChart() {
   const subId = document.getElementById('chart-sub').value;
-  const area  = document.getElementById('chart-area');
-  if (!subId) { area.innerHTML = '<div class="empty"><i>📈</i>เลือก Sub เพื่อดูกราฟ</div>'; return; }
+  const area = document.getElementById('chart-area');
+  if (!subId) {
+    area.innerHTML = '<div class="empty"><i>📈</i>เลือก Sub เพื่อดูกราฟ</div>';
+    return;
+  }
   const recs = getSubRecs(subId);
-  if (recs.length < 2) { area.innerHTML = '<div class="empty"><i>📊</i>ต้องมีอย่างน้อย 2 records</div>'; return; }
+  if (recs.length < 2) {
+    area.innerHTML = '<div class="empty"><i>📊</i>ต้องมีอย่างน้อย 2 records</div>';
+    return;
+  }
   const maxVal = Math.max(...recs.map(r => Math.max(0, parseFloat(r.used) || 0)), 1);
   area.innerHTML = recs.map(r => {
     const pct = Math.round(Math.max(0, parseFloat(r.used) || 0) / maxVal * 100);
     return `<div class="bar-row">
-      <div class="bar-label">${r.date.slice(5)}</div>
+      <div class="bar-label">${fmtShortDate(r.date)}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <div class="bar-val">${parseFloat(r.used || 0).toFixed(1)}</div>
+      <div class="bar-val">${fmtNum(r.used || 0, subId)}</div>
     </div>`;
   }).join('');
 }
@@ -1566,7 +1206,10 @@ function renderAllChart() {
     id: s.id,
     total: records.filter(r => r.subId === s.id).reduce((a, r) => a + (parseFloat(r.used) || 0), 0)
   })).filter(x => x.total > 0).sort((a, b) => b.total - a.total);
-  if (!summary.length) { area.innerHTML = '<div class="empty"><i>📊</i>ยังไม่มีข้อมูล</div>'; return; }
+  if (!summary.length) {
+    area.innerHTML = '<div class="empty"><i>📊</i>ยังไม่มีข้อมูล</div>';
+    return;
+  }
   const maxVal = Math.max(...summary.map(x => x.total), 1);
   area.innerHTML = summary.map(x => `<div class="bar-row">
     <div class="bar-label">${x.id}</div>
@@ -1575,12 +1218,13 @@ function renderAllChart() {
   </div>`).join('');
 }
 
-/* ──────────────────────────────────────────────────────
-   QR CODES
-────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   QR
+══════════════════════════════════════════════════════ */
 function buildUrl(subId) {
   return QR_BASE_URL.replace(/\/$/, '') + '?sub=' + encodeURIComponent(subId);
 }
+
 function renderQR() {
   const grid = document.getElementById('qr-grid');
   grid.innerHTML = '';
@@ -1599,8 +1243,11 @@ function renderQR() {
       try {
         document.getElementById(qid).innerHTML = '';
         new QRCode(document.getElementById(qid), {
-          text: url, width: 110, height: 110,
-          colorDark: '#000', colorLight: '#fff',
+          text: url,
+          width: 110,
+          height: 110,
+          colorDark: '#000',
+          colorLight: '#fff',
           correctLevel: QRCode.CorrectLevel.M
         });
       } catch(e) {}
@@ -1608,92 +1255,130 @@ function renderQR() {
   });
 }
 
-/* ──────────────────────────────────────────────────────
-   SETTINGS — SUB MANAGEMENT
-────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   SETTINGS - SUB MANAGEMENT
+══════════════════════════════════════════════════════ */
 function renderSubList() {
   document.getElementById('sub-count').textContent = subs.length;
   document.getElementById('sub-list').innerHTML = subs.map((s, i) => {
-    const cnt       = records.filter(r => r.subId === s.id).length;
+    const cnt = records.filter(r => r.subId === s.id).length;
     const totalUsed = records.filter(r => r.subId === s.id).reduce((a, r) => a + (parseFloat(r.used) || 0), 0);
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1">
         <div style="font-size:13px;font-weight:700;color:var(--accent);font-family:var(--font-mono)">${s.id}</div>
-        <div style="font-size:10px;color:var(--text-3);margin-top:2px">${s.name} · ${s.zone} · ${cnt} rec · ${Math.round(totalUsed)} kWh</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:2px">${s.name} · ${s.zone} · ${cnt} rec · ${Math.round(totalUsed)} kWh · ${s.decimal || 2}ทศนิยม</div>
       </div>
       <button class="btn btn-danger btn-sm" onclick="removeSub(${i})">🗑</button>
     </div>`;
   }).join('');
 }
+
 function addSub() {
-  const id   = document.getElementById('new-id').value.trim().toUpperCase();
+  const id = document.getElementById('new-id').value.trim().toUpperCase();
   const name = document.getElementById('new-name').value.trim();
-  const unit = document.getElementById('new-unit').value.trim() || 'kWh';
+  const decimal = parseInt(document.getElementById('new-decimal').value) || 2;
   const zone = document.getElementById('new-zone').value.trim() || 'Custom';
   if (!id || !name) return toast('กรอก ID และชื่อด้วย', 'err');
   if (subs.find(s => s.id === id)) return toast('ID นี้มีอยู่แล้ว', 'err');
-  subs.push({ id, name, zone, unit }); persist();
+  subs.push({ id, name, zone, decimal });
+  persist();
   document.getElementById('new-id').value = '';
   document.getElementById('new-name').value = '';
-  renderSubList(); renderZoneAreas(); populateDDs();
+  document.getElementById('new-decimal').value = '2';
+  renderSubList();
+  renderZoneAreas();
+  populateDDs();
   toast('✅ เพิ่ม ' + id, 'ok');
 }
+
 function removeSub(i) {
   const s = subs[i];
   if (!confirm('ลบ ' + s.id + '?')) return;
-  subs.splice(i, 1); persist();
-  renderSubList(); renderZoneAreas(); populateDDs();
+  subs.splice(i, 1);
+  persist();
+  renderSubList();
+  renderZoneAreas();
+  populateDDs();
   toast('ลบ ' + s.id);
 }
 
-/* ──────────────────────────────────────────────────────
-   EXPORT / IMPORT / BACKUP
-────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   EXPORT / IMPORT
+══════════════════════════════════════════════════════ */
+// 🔧 FIX: Export uses filtered records if filter is active
 function exportExcel() {
-  if (!records.length) return toast('ยังไม่มีข้อมูล', 'err');
+  const dataToExport = filteredRecords || records; // Use filtered if available
+  if (!dataToExport.length) return toast('ยังไม่มีข้อมูล', 'err');
+  
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(records.map(r => ({
-    'ID': r.id, 'Substation ID': r.subId, 'Substation Name': r.subName, 'Zone': r.zone,
-    'Date': r.date, 'Time': r.time,
-    'kWh': r.kwh, 'Used (kWh)': r.used,
-    'User': r.user, 'Note': r.note, 'Timestamp': r.ts
+  const ws = XLSX.utils.json_to_sheet(dataToExport.map(r => ({
+    'ID': r.id,
+    'Substation ID': r.subId,
+    'Substation Name': r.subName,
+    'Zone': r.zone,
+    'Date': fmtDate(r.date),
+    'Time': fmtTime(r.time),
+    'kWh': fmtNum(r.kwh, r.subId),
+    'Used (kWh)': fmtNum(r.used, r.subId),
+    'User': r.user,
+    'Note': r.note,
+    'Timestamp': r.ts
   })));
   ws['!cols'] = Array(11).fill({ wch: 16 });
   XLSX.utils.book_append_sheet(wb, ws, 'MeterRecords');
   XLSX.writeFile(wb, 'Meter_Records_' + new Date().toISOString().slice(0, 10) + '.xlsx');
   toast('✅ ส่งออก Excel สำเร็จ', 'ok');
 }
+
 function exportJSON() {
-  const blob = new Blob([JSON.stringify({ subs, records, exported: new Date().toISOString() }, null, 2)],
-    { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ subs, records, exported: new Date().toISOString() }, null, 2)], {
+    type: 'application/json'
+  });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'substation_backup_' + Date.now() + '.json';
-  a.click(); toast('💾 Backup สำเร็จ', 'ok');
+  a.click();
+  toast('💾 Backup สำเร็จ', 'ok');
 }
+
 function doImport(e) {
-  const file = e.target.files[0]; if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
   const r = new FileReader();
   r.onload = ev => {
     try {
       const d = JSON.parse(ev.target.result);
-      if (d.subs)    subs    = d.subs;
+      if (d.subs) {
+        // 🔧 MIGRATION: Add decimal field if missing
+        subs = d.subs.map(s => ({
+          ...s,
+          decimal: s.decimal !== undefined ? s.decimal : 2
+        }));
+      }
       if (d.records) records = d.records;
-      persist(); renderAll();
+      persist();
+      renderAll();
       toast(`📂 Import สำเร็จ — ${records.length} records`, 'ok');
-    } catch(err) { toast('ไฟล์ไม่ถูกต้อง', 'err'); }
+    } catch(err) {
+      toast('ไฟล์ไม่ถูกต้อง', 'err');
+    }
   };
-  r.readAsText(file); e.target.value = '';
-}
-function clearCache() {
-  if (!confirm('ล้าง Cache ในเครื่องนี้?\n(ข้อมูลใน Google Sheets ยังอยู่ครบ)')) return;
-  records = []; subs = INIT_SUBS; persist();
-  renderAll(); toast('ล้าง Cache แล้ว — กด Refresh โหลดจาก Sheets', 'warn');
+  r.readAsText(file);
+  e.target.value = '';
 }
 
-/* ──────────────────────────────────────────────────────
+function clearCache() {
+  if (!confirm('ล้าง Cache ในเครื่องนี้?\n(ข้อมูลใน Google Sheets ยังอยู่ครบ)')) return;
+  records = [];
+  subs = INIT_SUBS;
+  persist();
+  renderAll();
+  toast('ล้าง Cache แล้ว — กด Refresh โหลดจาก Sheets', 'warn');
+}
+
+/* ══════════════════════════════════════════════════════
    TOAST
-────────────────────────────────────────────────────── */
+══════════════════════════════════════════════════════ */
 function toast(msg, type = '') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1702,7 +1387,6 @@ function toast(msg, type = '') {
   t._t = setTimeout(() => { t.className = ''; }, 3000);
 }
 
-/* ── START ── */
 init();
 </script>
 </body>
