@@ -186,10 +186,33 @@ tr:hover td { background:var(--surface-2); }
 
 /* CHARTS */
 .bar-row { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
-.bar-label { font-size:var(--fs-xs); color:var(--text-3); width:55px; text-align:right; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--font-mono); }
-.bar-track { flex:1; background:var(--surface-3); border-radius:5px; height:18px; overflow:hidden; }
-.bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--green)); border-radius:5px; transition:width .5s cubic-bezier(.4,0,.2,1); }
-.bar-val { font-size:var(--fs-xs); color:var(--green); width:65px; flex-shrink:0; font-weight:700; font-family:var(--font-mono); }
+.bar-label {
+  font-size: 10px;
+  text-align: center;
+  margin-top: 8px; /* เพิ่มระยะห่างด้านบนป้ายชื่อ */
+  line-height: 1.3;
+  color: var(--text-2);
+  white-space: nowrap; /* ไม่ให้ข้อความขึ้นบรรทัดใหม่เอง */
+}
+.bar-track {
+  width: 30px; 
+  height: 180px; 
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-end; 
+  position: relative; 
+}
+.bar-fill {
+  width: 100%;
+  /* Gradient เขียวสดใสให้ดูงอกขึ้นมา */
+  background: linear-gradient(to top, #10b981, #34d399);
+  border-radius: 4px;
+/* เปลี่ยนจาก width เป็น height เพื่อให้งอกเป็นแนวตั้ง */
+  transition: height 0.3s ease-out;
+}
+.bar-val {font-size: var(--fs-xs); color: var(--green); font-weight: 700; font-family: var(--font-mono); margin-bottom: 5px;}
+.bar-column-container {display: flex; flex-direction: column; align-items: center; height: 100%;min-width: 80px; justify-content: flex-end;}
 
 /* QR */
 .qr-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
@@ -1176,38 +1199,39 @@ function updateBadge() {
 /* ══════════════════════════════════════════════════════
    CHARTS
 ══════════════════════════════════════════════════════ */
+/* ──────────────────────────────────────────────────────
+   CHARTS
+────────────────────────────────────────────────────── */
 function renderChart() {
   const subId = document.getElementById('chart-sub').value;
-  const area  = document.getElementById('chart-area');
+  const area = document.getElementById('chart-area');
   if (!subId) { area.innerHTML = '<div class="empty"><i>📈</i>เลือก Sub เพื่อดูกราฟ</div>'; return; }
   const recs = getSubRecs(subId);
   if (recs.length < 2) { area.innerHTML = '<div class="empty"><i>📊</i>ต้องมีอย่างน้อย 2 records</div>'; return; }
   
+  // ค้นหาค่าสูงสุดเพื่อใช้คำนวณความสูงเปอร์เซ็นต์
   const maxVal = Math.max(...recs.map(r => Math.max(0, parseFloat(r.used) || 0)), 1);
   const subConfig = subs.find(s => s.id === subId);
+  
+  // ดึงค่าระบบทศนิยมที่ตั้งไว้ของตู้นั้นๆ มาใช้แสดงผลตัวเลขบนแท่งกราฟ
   const dec = (subConfig && subConfig.decimals !== undefined) ? subConfig.decimals : 2;
 
-  // ปรับสไตล์ตัว Container ของกราฟให้เป็น Flexbox แนวตั้งและการเลื่อนแกน X (เมื่อดูในมือถือ)
-  area.style.display = 'flex';
-  area.style.alignItems = 'flex-end';
-  area.style.gap = '20px';
-  area.style.height = '320px';
-  area.style.overflowX = 'auto';
-  area.style.padding = '30px 15px 10px 15px';
-
   area.innerHTML = recs.map(r => {
+    // คำนวณเปอร์เซ็นต์ความสูงของแท่งกราฟ
     const pct = Math.round(Math.max(0, parseFloat(r.used) || 0) / maxVal * 100);
-    // ฟอร์แมตการแสดงผลเวลาและวันที่ให้อยู่ในบรรทัดเดียวกันตามฟีดแบ็ก
+    
+    // จัดฟอร์แมตเวลาและวันที่ใหม่ให้สะอาดตา
     const timeLabel = fmtTime(r.time);
     const dateLabel = fmtDate(r.date);
     
+    // สร้าง HTML โครงสร้างใหม่แบบแนวตั้ง
     return `
-      <div style="display:flex; flex-direction:column; align-items:center; height:100%; min-width:85px; justify-content:flex-end;">
-        <div style="font-size:11px; font-weight:700; color:var(--green); margin-bottom:6px;">${parseFloat(r.used || 0).toFixed(dec)}</div>
-        <div style="width:30px; height:180px; background:rgba(128,128,128,0.1); border-radius:4px; display:flex; align-items:flex-end;">
-          <div style="width:100%; height:${pct}%; background:linear-gradient(to top, #10b981, #34d399); border-radius:4px; transition: height 0.3s ease;"></div>
+      <div class="bar-column-container">
+        <div class="bar-val">${parseFloat(r.used || 0).toFixed(dec)}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="height:${pct}%"></div>
         </div>
-        <div style="font-size:10px; text-align:center; margin-top:8px; line-height:1.3; color:var(--text-2); white-space:nowrap;">
+        <div class="bar-label">
           <strong>${timeLabel}</strong><br>${dateLabel}
         </div>
       </div>
