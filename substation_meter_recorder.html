@@ -388,10 +388,9 @@ tr:hover td{background:var(--surface-2)}
   </div>
 
   <!-- ──────────── DATA PANEL ──────────── -->
-  <div class="panel" id="panel-data">
+<div class="panel" id="panel-data">
     <div class="stats-row" id="stats-row"></div>
     <div class="card">
-      <!-- FIX #4: filter badge shows when active -->
       <div class="card-title">🔍 กรองข้อมูล <span id="filter-badge" class="filter-badge" style="display:none">● Active</span></div>
       <div class="f-2col">
         <div class="f-row">
@@ -418,6 +417,7 @@ tr:hover td{background:var(--surface-2)}
         <button class="btn btn-yellow btn-sm" onclick="loadFromServer()">🔄 Refresh</button>
       </div>
     </div>
+    
     <div class="card">
       <div class="card-title">📋 รายการทั้งหมด <span id="data-count" style="font-size:10px;color:var(--text-3);font-weight:400;margin-left:4px"></span></div>
       <div class="tbl-wrap">
@@ -427,7 +427,28 @@ tr:hover td{background:var(--surface-2)}
         </table>
         <div class="empty" id="main-empty" style="display:none"><i>📭</i>ยังไม่มีข้อมูล</div>
       </div>
-    </div>
+
+      <div class="pagination-bar" style="display:flex; justify-content:space-between; align-items:center; padding-top:14px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; gap:12px; font-size:13px;">
+        <div style="color:var(--text-3); display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+          <span>แสดงข้อมูล</span>
+          <span id="rowStart" style="font-weight:700; color:#00c8f0;">0</span>
+          <span>ถึง</span>
+          <span id="rowEnd" style="font-weight:700; color:#00c8f0;">0</span>
+          <span>จากทั้งหมด</span>
+          <span id="totalRows" style="font-weight:700;">0</span>
+          <span>รายการ</span>
+          <span style="color:rgba(255,255,255,0.2); margin:0 4px;">|</span>
+          <span>แถวต่อหน้า:</span>
+          <select id="pageSize" onchange="onPageSizeChange()" style="background:#182640; color:#d8eaff; border:1px solid #1a2e48; padding:4px 8px; border-radius:6px; outline:none; font-family:inherit; cursor:pointer;">
+            <option value="10">10</option>
+            <option value="15" selected>15</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <div id="pageNav" style="display:flex; gap:6px;"></div>
+      </div>
+      </div>
   </div>
 
   <!-- ──────────── CHART PANEL ──────────── -->
@@ -573,9 +594,13 @@ tr:hover td{background:var(--surface-2)}
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbwO5gUH2c8rcl-aSFuE2s32IxpgRh5ES3LFa1wUz3dNKfh33Kn11R9AJ5ZpwzrgD_WZnA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw7b4ZvY7qPzBwRm_x22eekc3LHycPm1fY7Fx1jlD7snVhXn5c0_7PvpjiJU6B-_EI59Q/exec';
 const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
 const ADMIN_PASS = '1234';
+   // ── ตัวแปรสำหรับระบบตัวกรองและการแบ่งหน้า (ใส่เพิ่มเข้าไป) ──
+let filteredRecords = []; // เก็บข้อมูลที่ผ่านการกรองแล้ว
+let currentPage = 1;      // หน้าปัจจุบัน
+let pageSize = 15;        // จำนวนแถวต่อ 1 หน้า (ปรับเพิ่มลดได้)
 
 const INIT_SUBS = [
   {id:'SUB-02',name:'NO.2',zone:'2-5 UA Shop',decimal:2},
@@ -653,7 +678,114 @@ function fmtNum(val,subId){
   const dec=sub&&sub.decimal!==undefined?sub.decimal:2;
   return parseFloat(val||0).toFixed(dec);
 }
+   
+function(data) {
+  rawRecords = data.records ? data.records.reverse() : []; 
+  setupFilterDropdowns(data.subs || []); 
+  applyFilter(); 
+}
+// 🎯 1. ฟังก์ชันคำนวณตัวกรอง (Filter Logic)
+function applyFilter() {
+  const subVal = document.getElementById('fl-sub').value;    // แก้ ID ให้ตรงกับ HTML เดิม (fl-sub)
+  const userVal = document.getElementById('fl-user').value.trim().toLowerCase(); // เพิ่มตัวกรองชื่อผู้บันทึก
+  const startVal = document.getElementById('fl-from').value;  // แก้ ID ให้ตรงกับ HTML เดิม (fl-from)
+  const endVal = document.getElementById('fl-to').value;      // แก้ ID ให้ตรงกับ HTML เดิม (fl-to)
 
+  filteredRecords = rawRecords.filter(r => {
+    if (subVal && r.subId !== subVal) return false;
+    if (userVal && !String(r.user).toLowerCase().includes(userVal)) return false;
+    if (startVal && r.date < startVal) return false;
+    if (endVal && r.date > endVal) return false;
+    return true;
+  });
+
+  currentPage = 1; 
+  renderTable();   
+}
+
+// 🎯 2. ฟังก์ชันปรับขนาดแถวแสดงผลเมื่อคนดูเลือกเปลี่ยนจำนวนแถว
+function onPageSizeChange() {
+  pageSize = parseInt(document.getElementById('pageSize').value);
+  currentPage = 1;
+  renderTable();
+}
+
+// 🎯 3. ฟังก์ชันสร้างปุ่มเปลี่ยนหน้า (Pagination Controls Changer)
+function renderPaginationControls(totalItems) {
+  const nav = document.getElementById('pageNav'); // ไอดีกล่องที่จะวางปุ่ม
+  if (!nav) return;
+  nav.innerHTML = '';
+
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if (totalPages <= 1) return; // ถ้ามีหน้าเดียว ไม่ต้องโชว์ปุ่มควบคุม
+
+  // ปุ่มย้อนกลับ ◀
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'page-btn'; prevBtn.textContent = '◀';
+  prevBtn.disabled = currentPage === 1;
+  prevBtn.onclick = () => { currentPage--; renderTable(); };
+  nav.appendChild(prevBtn);
+
+  // วาดตัวเลขหน้า (จำกัดให้โชว์แค่ช่วงใกล้ๆ หน้าปัจจุบัน ลดการล้นจอ)
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+      const pBtn = document.createElement('button');
+      pBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+      pBtn.textContent = i;
+      pBtn.onclick = () => { currentPage = i; renderTable(); };
+      nav.appendChild(pBtn);
+    } else if (i === currentPage - 3 || i === currentPage + 3) {
+      const dot = document.createElement('span');
+      dot.textContent = '...'; dot.style.color = '#4e6a8a';
+      nav.appendChild(dot);
+    }
+  }
+
+  // ปุ่มถัดไป ▶
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'page-btn'; nextBtn.textContent = '▶';
+  nextBtn.disabled = currentPage === totalPages;
+  nextBtn.onclick = () => { currentPage++; renderTable(); };
+  nav.appendChild(nextBtn);
+}
+   
+function renderTable() {
+  // แก้จาก tableBody เป็น main-body ตาม HTML จริงของคุณม็อก
+  const tbody = document.getElementById('main-body'); 
+  tbody.innerHTML = ''; 
+
+  const total = filteredRecords.length;
+  
+  // หั่นข้อมูลแสดงผลเฉพาะหน้า
+  const startIdx = (currentPage - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const pageItems = filteredRecords.slice(startIdx, endIdx); 
+
+  // ปรับการแสดงผลตัวเลขภาพรวมท้ายตาราง
+  if(document.getElementById('totalRows')) document.getElementById('totalRows').textContent = total;
+  if(document.getElementById('rowStart')) document.getElementById('rowStart').textContent = total > 0 ? startIdx + 1 : 0;
+  if(document.getElementById('rowEnd')) document.getElementById('rowEnd').textContent = endIdx;
+
+  // จัดการกรณีไม่มีข้อมูลให้เปิด-ปิดตาม ID เดิมของคุณม็อก
+  const emptyBox = document.getElementById('main-empty');
+  if (total === 0) {
+    if(emptyBox) emptyBox.style.display = 'block';
+    if(document.getElementById('pageNav')) document.getElementById('pageNav').innerHTML = '';
+    return;
+  } else {
+    if(emptyBox) emptyBox.style.display = 'none';
+  }
+
+  // ── วนลูปวาดตาราง (ใช้โค้ดสร้าง TR > TD เดิมของคุณม็อกได้เลย แต่เปลี่ยนมาลูป pageItems) ──
+  pageItems.forEach(r => {
+      // ยกโค้ด append แถวตารางเดิมของคุณม็อกมาใส่ตรงนี้
+  });
+
+  // วาดเลขหน้าย่อย
+  renderPaginationControls(total);
+}
+
+   
 // FIX #3: format for chart label "HH:MM\nDD/MM/YYYY"
 function fmtChartDate(dateStr){
   if(!dateStr) return '—';
@@ -1142,13 +1274,13 @@ function applyFilter(){
   renderData(getFilteredRecords());
 }
 
-function clearFilter(){
-  activeFilter={sub:'',user:'',from:'',to:''};
-  ['fl-sub','fl-user','fl-from','fl-to'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.value='';
-  });
-  renderData([...records]);
+// ฟังก์ชันล้างค่าตัวกรอง ให้ตรงกับปุ่มล้างเดิม
+function clearFilter() {
+  document.getElementById('fl-sub').value = '';
+  document.getElementById('fl-user').value = '';
+  document.getElementById('fl-from').value = '';
+  document.getElementById('fl-to').value = '';
+  applyFilter();
 }
 
 function populateDDs(){
