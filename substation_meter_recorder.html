@@ -683,53 +683,55 @@ function fmtNum(val,subId){
    
 // 🎯 1. ฟังก์ชันคำ Login
 // 🔒 ฟังก์ชันตรวจสอบการล็อกอินฝั่งหน้าบ้าน
-function handleLogin(e) {
-  if (e) e.preventDefault(); // ป้องกันหน้าเว็บรีเฟรชตัวเองถ้าใช้แท็ก <form>
+function handleLogin() {
+  // 1. ดึง Element จาก ID ที่ถูกต้องใน HTML
+  const userInput = document.getElementById('login-user');
+  const passInput = document.getElementById('login-pass');
+  const errDiv    = document.getElementById('login-err');
+  const loginGate = document.getElementById('login-gate');
 
-  // ดึงค่าจากช่อง Input (ปรับ ID ให้ตรงกับหน้าจอของพี่ม็อกนะครับ)
-  const userEl = document.getElementById('login-username') || document.getElementById('username');
-  const passEl = document.getElementById('login-password') || document.getElementById('password');
-  
-  if (!userEl || !passEl) {
-    console.error("ไม่พบ Element ช่องกรอก Username หรือ Password ในหน้า HTML");
+  // ตรวจสอบระบบดักบั๊ก (บรรทัด 694 เดิม)
+  if (!userInput || !passInput) {
+    console.error("❌ ไม่พบ Element ช่องกรอก Username หรือ Password ในหน้า HTML");
     return;
   }
 
-  const userVal = userEl.value.trim().toLowerCase();
-  const passVal = passEl.value;
+  const userVal = userInput.value.trim();
+  const passVal = passInput.value.trim();
 
-  // 1. เคสระบบยังโหลดข้อมูลจาก Sheets ไม่เสร็จ
-  if (!serverUsers || serverUsers.length === 0) {
-    alert("⏳ กำลังโหลดข้อมูลบัญชีจาก Google Sheets... กรุณารอสักครู่แล้วลองกดใหม่ครับ");
+  // 2. ซ่อนข้อความแจ้งเตือนข้อผิดพลาดก่อนตรวจรหัส
+  errDiv.style.display = 'none';
+
+  // 3. ตรวจสอบสิทธิ์การเข้าสู่ระบบ
+  // เคสที่ 1: ตรวจสอบกับระบบ Admin Master Pass (1234)
+  if (userVal.toLowerCase() === 'admin' && passVal === ADMIN_PASS) {
+    currentUser = 'Admin';
+    appMode = 'admin'; // เปิดสิทธิ์แอดมินแก้ไขระบบได้
+    loginGate.style.display = 'none'; // ปลดล็อกหน้าจอบัง
+    console.log("🔓 เข้าสู่ระบบสำเร็จในฐานะ: Admin");
+    if (typeof initDashboard === 'function') initDashboard(); // เรียกฟังก์ชันวาดหน้าจอ (ถ้ามี)
     return;
   }
 
-  // 2. ค้นหาชื่อและรหัสผ่านที่ตรงกันในฐานข้อมูล
-  const matchedUser = serverUsers.find(u => u.username.toLowerCase() === userVal && String(u.password) === passVal);
+  // เคสที่ 2: ตรวจสอบ Dynamic จากข้อมูลพนักงานที่ดึงมาจาก Google Sheets (serverUsers)
+  // สมมติโครงสร้างข้อมูลใน Sheets เป็น [ { username: 'mok', password: '...' }, ... ]
+  const foundUser = serverUsers.find(u => 
+    u.username && u.username.toLowerCase() === userVal.toLowerCase() && String(u.password) === passVal
+  );
 
-  if (matchedUser) {
-    // อัปเดตสถานะผู้ใช้งานปัจจุบัน
-    currentUser = matchedUser.name; 
-    
-    // 🔓 ซ่อนหน้าจอ Login Gate และเปิดหน้า Dashboard (ปรับ ID ตามหน้าจอจริง)
-    const loginGate = document.getElementById('login-gate') || document.getElementById('loginModal');
-    if (loginGate) loginGate.style.display = 'none';
-
-    alert(`🔓 ยินดีต้อนรับครับ คุณ${matchedUser.name} !`);
-    
-    // สั่งเปิดหน้าแรกของ Dashboard ทันทีหลังจากล็อกอินผ่าน
-    if (typeof goTab === 'function') goTab('summary'); 
-    
+  if (foundUser) {
+    currentUser = foundUser.username;
+    appMode = 'basic'; // สิทธิ์พนักงานทั่วไปสำหรับบันทึกค่ามิเตอร์
+    loginGate.style.display = 'none'; // ปลดล็อกหน้าจอบัง
+    console.log("🔓 เข้าสู่ระบบสำเร็จในฐานะพนักงาน:", currentUser);
+    if (typeof initDashboard === 'function') initDashboard();
   } else {
-    // ❌ เคสกรอกผิด/มั่ว: ต้องแจ้งเตือนให้ผู้ใช้รู้ตัว ไม่ปล่อยให้นิ่งเงียบ
-    alert("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง! (ลองใช้ admin / 1234 หรือ mok / isuzu2026)");
-    
-    // เคลียร์ช่องรหัสผ่านให้กรอกใหม่
-    passEl.value = '';
-    passEl.focus();
+    // ❌ ถ้ารหัสไม่ตรงเลย ให้โชว์ตัวหนังสือสีแดง
+    errDiv.style.display = 'block';
+    errDiv.innerText = '❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง';
   }
 }
-
+   
 // 🎯 2. ฟังก์ชันปรับขนาดแถวแสดงผลเมื่อคนดูเลือกเปลี่ยนจำนวนแถว
 function onPageSizeChange() {
   pageSize = parseInt(document.getElementById('pageSize').value);
