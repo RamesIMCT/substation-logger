@@ -623,7 +623,7 @@ tr:hover td{background:var(--surface-2)}
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbynQLUMFC8Gsz8oMgZ4GSwrEmsIjjCyrUA_kqOj787t992Acyx9-0P1PBDvYIUvBthjKQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbypdE3ZHdS6fz3DW7GNJIYb9FAFQJf2UlJFj0KfPU4N_1diEsdz66ZYsb4lwO5H-r9aiQ/exec';
 const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
 const ADMIN_PASS = '1234';
 
@@ -1276,7 +1276,7 @@ function openEdit(recordId) {
   // ดักจับเผื่อช่างหน้างานกดเปลี่ยนตู้ Substation ในหน้าแก้ไข ให้ปรับล็อกทศนิยมตามตู้ใหม่ทันที
   editSubSelect.onchange = (e) => updateEditKwhStep(e.target.value);
 
-  // เปิดหน้าต่าง Modal (เปลี่ยน style หรือคลาสตาม CSS ที่พี่ม็อกดีไซน์ไว้)
+  // เปิดหน้าต่าง Modal (เปลี่ยน style หรือคลาสตาม CSS ที่ดีไซน์ไว้)
   const modal = document.getElementById('edit-modal');
   modal.style.display = 'flex'; 
   modal.classList.add('open'); 
