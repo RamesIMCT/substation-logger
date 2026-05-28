@@ -271,6 +271,25 @@ tr:hover td{background:var(--surface-2)}
 </style>
 </head>
 <body>
+<div id="login-gate" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#1a252f; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:sans-serif; color:#fff;">
+  <div style="background:#2c3e50; padding:30px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.3); width:90%; max-width:360px; text-align:center;">
+    <h2 style="margin-top:0; margin-bottom:8px; color:#3498db;">⚡ Substation Logger</h2>
+    <p style="font-size:13px; color:#bdc3c7; margin-bottom:24px;">กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ</p>
+    
+    <div style="text-align:left; margin-bottom:14px;">
+      <label style="font-size:12px; color:#34495e; display:block; margin-bottom:4px; color:#add8e6;">Username:</label>
+      <input type="text" id="login-user" style="width:100%; padding:10px; border:none; border-radius:4px; background:#34495e; color:#fff; box-sizing:border-box;" placeholder="ชื่อผู้ใช้งาน">
+    </div>
+    
+    <div style="text-align:left; margin-bottom:24px;">
+      <label style="font-size:12px; display:block; margin-bottom:4px; color:#add8e6;">Password:</label>
+      <input type="password" id="login-pass" style="width:100%; padding:10px; border:none; border-radius:4px; background:#34495e; color:#fff; box-sizing:border-box;" placeholder="••••••••">
+    </div>
+    
+    <button onclick="handleLogin()" style="width:100%; padding:12px; border:none; border-radius:4px; background:#2ecc71; color:#fff; font-weight:bold; cursor:pointer; font-size:15px;">เข้าสู่ระบบ 🔓</button>
+    <div id="login-err" style="color:#e74c3c; font-size:13px; margin-top:12px; display:none;">❌ รหัสผ่านไม่ถูกต้อง</div>
+  </div>
+</div>
 
 <!-- HEADER -->
 <div class="hdr">
@@ -559,18 +578,22 @@ tr:hover td{background:var(--surface-2)}
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-head">✏️ แก้ไข Substation<button class="modal-close" onclick="closeEditSub()">✕</button></div>
+    
     <div class="f-row">
       <label class="f-label">Sub ID (ไม่สามารถเปลี่ยนได้)</label>
       <input class="f-input" id="esub-id" disabled>
     </div>
+    
     <div class="f-row">
       <label class="f-label">ชื่อตู้</label>
       <input class="f-input" id="esub-name" placeholder="เช่น NO.40">
     </div>
+    
     <div class="f-row">
       <label class="f-label">Zone / พื้นที่</label>
       <input class="f-input" id="esub-zone" placeholder="เช่น Body Shop">
     </div>
+    
     <div class="f-row">
       <label class="f-label">จำนวนทศนิยม (0 = จำนวนเต็ม)</label>
       <select class="f-input" id="esub-decimal">
@@ -581,6 +604,12 @@ tr:hover td{background:var(--surface-2)}
         <option value="4">4 — ทศนิยม 4 ตำแหน่ง (12345.6789)</option>
       </select>
     </div>
+
+    <div class="f-row">
+      <label class="f-label">ตัวคูณมิเตอร์ (Multiplier)</label>
+      <input class="f-input" type="number" id="esub-multiplier" step="any" placeholder="เช่น 1, 10, 40, 120" inputmode="decimal">
+    </div>
+    
     <div class="btn-row">
       <button class="btn btn-save btn-full" onclick="saveEditSub()">✅ บันทึก</button>
       <button class="btn btn-ghost" onclick="closeEditSub()" style="padding:11px 20px">ยกเลิก</button>
@@ -601,7 +630,9 @@ const ADMIN_PASS = '1234';
 let filteredRecords = []; // เก็บข้อมูลที่ผ่านการกรองแล้ว
 let currentPage = 1;      // หน้าปัจจุบัน
 let pageSize = 15;        // จำนวนแถวต่อ 1 หน้า (ปรับเพิ่มลดได้)
-
+let serverUsers = []; // จะถูกเติมเต็มเมื่อดึงข้อมูลจาก Google Sheets สำเร็จ
+let editSubIndex = null;
+   
 const INIT_SUBS = [
   {id:'SUB-02',name:'NO.2',zone:'2-5 UA Shop',decimal:2},
   {id:'SUB-03',name:'NO.3',zone:'2-5 UA Shop',decimal:2},
@@ -645,7 +676,7 @@ let activeSub = null;
 let editRecordId = null;
 let editSubIndex = null; // FIX #1
 let isConnected = false;
-
+let currentEditingRecordId = null;
 /* ══════════════════════════════════════════════════════
    UTILITIES
 ══════════════════════════════════════════════════════ */
@@ -679,8 +710,34 @@ function fmtNum(val,subId){
   return parseFloat(val||0).toFixed(dec);
 }
    
-// 🎯 1. ฟังก์ชันคำนวณตัวกรอง (Filter Logic)
+// 🎯 1. ฟังก์ชันคำ Login
+function handleLogin() {
+  const uInput = document.getElementById('login-user').value.trim();
+  const pInput = document.getElementById('login-pass').value;
+  const errBox = document.getElementById('login-err');
+  
+  // กรณีโหลดข้อมูลจากชีทไม่สำเร็จหรือออฟไลน์ ให้ใช้สิทธิ์สำรองเป็นแอดมินหลัก (ADMIN_PASS = '1234')
+  if (serverUsers.length === 0) {
+    if (uInput === 'admin' && pInput === ADMIN_PASS) {
+      document.getElementById('login-gate').style.display = 'none';
+      toast('🔓 เข้าใช้งานด้วยบัญชีสำรอง (Offline Mode)','warn');
+      return;
+    }
+  }
 
+  // ค้นหาบัญชีผู้ใช้ในรายชื่อที่ดึงมาจาก Google Sheets
+  const match = serverUsers.find(x => x.username === uInput && x.password === String(pInput));
+  
+  if (match) {
+    document.getElementById('login-gate').style.display = 'none';
+    // เอาชื่อผู้ล็อกอินไปใส่ในช่อง "ชื่อผู้จดบันทึก" อัตโนมัติเลยเพื่อความสะดวก
+    if(document.getElementById('in-user')) document.getElementById('in-user').value = match.name || uInput;
+    toast(`👋 ยินดีต้อนรับคุณ ${match.name || uInput}`,'ok');
+  } else {
+    errBox.style.display = 'block';
+    errBox.textContent = '❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง';
+  }
+}
 
 // 🎯 2. ฟังก์ชันปรับขนาดแถวแสดงผลเมื่อคนดูเลือกเปลี่ยนจำนวนแถว
 function onPageSizeChange() {
@@ -874,26 +931,32 @@ async function loadFromServer(){
   try{
     const data=await apiGet();
     if(!data||data.error) throw new Error(data?data.error:'No Response');
-    if(data.records) records=data.records.map(r=>({...r,kwh:parseFloat(r.kwh)||0,used:parseFloat(r.used)||0}));
+    if (data.records) {
+     const mapped = data.records.map(r => ({ ...r, kwh: parseFloat(r.kwh) || 0 }));
+     records = computeAllUsedValues(mapped);
+   }
     if(data.subs&&data.subs.length>0){
-      subs=data.subs.map(s=>({...s,decimal:s.decimal!==undefined?s.decimal:2}));
+      subs=data.subs.map(s=>({...s,decimal:s.decimal!==undefined?s.decimal:2, multiplier:s.multiplier!==undefined?s.multiplier:1}));
     }
+    
+    // ── 🔒 [ดึงข้อมูลบัญชี] นำรายชื่อผู้ใช้จากชีทมาลงระบบล็อกอิน ──
+    if(data.users) {
+      serverUsers = data.users; // โครงสร้างในชีทควรส่งเป็น JSON Array: [{username:'...', password:'...', name:'...'}, ...]
+    }
+    // ──────────────────────────────────────────────────────────────
+
     persist();
     isConnected=true;
     setSyncStatus('ok',`โหลดสำเร็จ — ${records.length} records`);
     document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
     
-    // ── 🌟 [จุดที่เปลี่ยน] รันของเดิมเสร็จ แล้วสั่งระบบคัดกรอง/แบ่งหน้าต่อทันที ──
-    renderAll();   // เรียกฟังก์ชันวาดแดชบอร์ด/สถิติภาพรวมตัวเดิมของคุณม็อก
-    applyFilter(); // สั่งให้ระบบคัดกรองและแบ่งหน้าตารางเริ่มทำงานต่อ
-    // ──────────────────────────────────────────────────────────────
+    renderAll();
+    applyFilter();
     
   }catch(e){
     isConnected=false;
     setSyncStatus('error','โหลดไม่ได้: '+e.message);
     document.getElementById('hdr-small').textContent='ใช้ข้อมูล Offline';
-    
-    // ── 🌟 [เพิ่มตรงนี้ด้วย] เผื่อกรณีเปิดแบบ Offline ให้ตารางยังตัดหน้าเพจได้ ──
     applyFilter(); 
   }
 }
@@ -1014,7 +1077,20 @@ function selectSub(subId){
   document.getElementById('entry-section').style.display='block';
   document.getElementById('banner-id').textContent=activeSub.id;
   document.getElementById('banner-name').textContent=`${activeSub.name} · ${activeSub.zone}`;
-  document.getElementById('in-kwh').value='';
+  
+  // ── 🔒 [จุดล็อกทศนิยม] ตั้งค่า step ของช่องกรอกข้อมูลตามเงื่อนไขตู้ ──
+  const inKwh = document.getElementById('in-kwh');
+  const dec = activeSub.decimal !== undefined ? activeSub.decimal : 2;
+  inKwh.value='';
+  if (dec === 0) {
+    inKwh.setAttribute('step', '1');
+    inKwh.setAttribute('placeholder', 'กรอกเลขจำนวนเต็มเท่านั้น');
+  } else {
+    inKwh.setAttribute('step', (1 / Math.pow(10, dec)).toString());
+    inKwh.setAttribute('placeholder', `กรอกทศนิยม ${dec} ตำแหน่ง`);
+  }
+  // ──────────────────────────────────────────────────────────────
+
   document.getElementById('in-note').value='';
   document.getElementById('preview-box').style.display='none';
   setNow();
@@ -1098,7 +1174,8 @@ async function saveRecord(){
     if(!confirm(`ค่าที่กรอก (${kwh}) น้อยกว่าครั้งก่อน (${lastKwh})\nบันทึกต่อหรือไม่?`)) return;
   }
   const now=new Date();
-  const used=lastKwh!==null?kwh-lastKwh:0;
+  const multiplier = activeSub.multiplier !== undefined ? parseFloat(activeSub.multiplier) : 1;
+  const used = lastKwh !== null ? (kwh - lastKwh) * multiplier : 0;
   const rec={
     id:`REC-${now.getTime()}-${Math.floor(Math.random()*1000)}`,
     subId:activeSub.id,subName:activeSub.name,zone:activeSub.zone,
@@ -1128,51 +1205,176 @@ async function saveRecord(){
   }
 }
 
+// ฟังก์ชันคำนวณค่า Used บนเบราว์เซอร์ เรียงตามเวลาจริงของแต่ละตู้
+function computeAllUsedValues(rawRecords) {
+  // 1. แยกกลุ่มข้อมูลตาม Substation ID ก่อน เพราะเราต้องลบกันเฉพาะในตู้ตัวเอง
+  const groups = {};
+  rawRecords.forEach(r => {
+    if (!groups[r.subId]) groups[r.subId] = [];
+    groups[r.subId].push(r);
+  });
+
+  // 2. วิ่งคำนวณ Delta (ผลต่าง) ในแต่ละตู้
+  Object.keys(groups).forEach(subId => {
+    // เรียงลำดับจากอดีตไปปัจจุบัน (เก่าสุดขึ้นก่อน) เพื่อให้ลบตามลำดับเวลาได้ถูกต้อง
+    groups[subId].sort((a, b) => {
+      const timeA = `${a.date} ${a.time || '00:00'}`;
+      const timeB = `${b.date} ${b.time || '00:00'}`;
+      return timeA.localeCompare(timeB);
+    });
+
+    const sub = subs.find(s => s.id === subId);
+    const multiplier = sub && sub.multiplier !== undefined ? parseFloat(sub.multiplier) : 1;
+
+    // ลูปคิดค่าย้อนหลัง
+    for (let i = 0; i < groups[subId].length; i++) {
+      if (i === 0) {
+        groups[subId][i].used = 0; // แถวแรกสุดในระบบของตู้นั้นจะยังไม่มีตัวลบ
+      } else {
+        const prevKwh = parseFloat(groups[subId][i - 1].kwh) || 0;
+        const currKwh = parseFloat(groups[subId][i].kwh) || 0;
+        
+        // คำนวณผลต่าง x ตัวคูณของตู้นั้นๆ
+        let diff = currKwh - prevKwh;
+        
+        // 💡 เซฟการ์ด: เผื่อกรณีเปลี่ยนมิเตอร์ใหม่แล้วเลขรีเซ็ตเริ่มต้นจาก 0
+        if (diff < 0) diff = 0; 
+
+        groups[subId][i].used = diff * multiplier;
+      }
+    }
+  });
+
+  // 3. รวมร่างกลับมาเป็น Array ก้อนเดียวเหมือนเดิม
+  return Object.values(groups).flat();
+}   
 /* ══════════════════════════════════════════════════════
    EDIT / DELETE RECORD
 ══════════════════════════════════════════════════════ */
-function openEdit(id){
-  const r=records.find(x=>x.id===id); if(!r) return;
-  editRecordId=id;
-  document.getElementById('edit-sub').innerHTML=subs.map(s=>
-    `<option value="${s.id}"${s.id===r.subId?' selected':''}>${s.id} — ${s.name}</option>`).join('');
-  document.getElementById('edit-kwh').value=r.kwh;
-  document.getElementById('edit-date').value=r.date;
-  document.getElementById('edit-time').value=r.time||'';
-  document.getElementById('edit-user').value=r.user;
-  document.getElementById('edit-note').value=r.note||'';
-  document.getElementById('edit-modal').classList.add('open');
-}
-function closeEdit(){ document.getElementById('edit-modal').classList.remove('open'); editRecordId=null; }
-function closeEditIf(e){ if(e.target.id==='edit-modal') closeEdit(); }
+function openEdit(recordId) {
+  const r = records.find(x => x.id === recordId);
+  if (!r) return toast('❌ ไม่พบข้อมูลรายการนี้', 'err');
+  
+  currentEditingRecordId = recordId;
 
-async function saveEdit(){
-  const r=records.find(x=>x.id===editRecordId); if(!r) return;
-  const kwh=parseFloat(document.getElementById('edit-kwh').value);
-  const user=document.getElementById('edit-user').value.trim();
-  if(isNaN(kwh)||!user) return toast('กรอกให้ครบด้วย','err');
-  const newSubId=document.getElementById('edit-sub').value;
-  const oldSubId=r.subId;
-  r.subId=newSubId; r.kwh=kwh;
-  r.date=document.getElementById('edit-date').value;
-  r.time=document.getElementById('edit-time').value;
-  r.user=user; r.note=document.getElementById('edit-note').value||'';
-  r.editedTs=new Date().toISOString();
-  [newSubId,oldSubId].filter((v,i,a)=>a.indexOf(v)===i).forEach(sid=>{
-    const chain=getSubRecs(sid);
-    chain.forEach((rec,i)=>{
-      const idx=records.findIndex(x=>x.id===rec.id);
-      if(idx>=0) records[idx].used=i===0?0:rec.kwh-chain[i-1].kwh;
-    });
-  });
-  persist(); closeEdit(); toast('✅ แก้ไขแล้ว','ok'); renderAll();
-  setSyncStatus('busy','กำลังอัปเดต Sheets...');
-  try{
-    const res=await apiPost({action:'updateRecord',record:r});
-    setSyncStatus(res.success?'ok':'error',res.success?'อัปเดตสำเร็จ':(res.error||'ไม่สำเร็จ'));
-  }catch(e){ setSyncStatus('error','Offline'); }
+  // โหลดรายชื่อ Substation ลงตู้ Dropdown ใน Modal แก้ไข
+  const editSubSelect = document.getElementById('edit-sub');
+  editSubSelect.innerHTML = subs.map(s => 
+    `<option value="${s.id}" ${s.id === r.subId ? 'selected' : ''}>${s.id} — ${s.name}</option>`
+  ).join('');
+
+  // นำค่าเดิมไปเติมลงในฟิลด์ต่างๆ
+  document.getElementById('edit-kwh').value = r.kwh;
+  document.getElementById('edit-date').value = r.date;
+  document.getElementById('edit-time').value = r.time || '';
+  document.getElementById('edit-user').value = r.user || '';
+  document.getElementById('edit-note').value = r.note || '';
+
+  // 🔒 ล็อกทศนิยมช่องกรอกตามข้อกำหนดตู้
+  updateEditKwhStep(r.subId);
+
+  // ดักจับเผื่อช่างหน้างานกดเปลี่ยนตู้ Substation ในหน้าแก้ไข ให้ปรับล็อกทศนิยมตามตู้ใหม่ทันที
+  editSubSelect.onchange = (e) => updateEditKwhStep(e.target.value);
+
+  // เปิดหน้าต่าง Modal (เปลี่ยน style หรือคลาสตาม CSS ที่พี่ม็อกดีไซน์ไว้)
+  const modal = document.getElementById('edit-modal');
+  modal.style.display = 'flex'; 
+  modal.classList.add('open'); 
 }
 
+* 🔒 ฟังก์ชันย่อยสำหรับคำนวณและล็อก Step ทศนิยมในตู้แก้ไข
+ */
+function updateEditKwhStep(subId) {
+  const sub = subs.find(s => s.id === subId);
+  const dec = sub && sub.decimal !== undefined ? sub.decimal : 2;
+  const inputKwh = document.getElementById('edit-kwh');
+  
+  if (dec === 0) {
+    inputKwh.setAttribute('step', '1');
+    inputKwh.setAttribute('placeholder', 'กรอกเลขจำนวนเต็มเท่านั้น');
+  } else {
+    inputKwh.setAttribute('step', (1 / Math.pow(10, dec)).toString());
+    inputKwh.setAttribute('placeholder', `กรอกทศนิยม ${dec} ตำแหน่ง`);
+  }
+}
+   
+function closeEdit() {
+  currentEditingRecordId = null;
+  const modal = document.getElementById('edit-modal');
+  modal.style.display = 'none';
+  modal.classList.remove('open');
+}
+
+function closeEditIf(event) {
+  if (event.target.id === 'edit-modal') {
+    closeEdit();
+  }
+}
+
+async function saveEdit() {
+  if (!currentEditingRecordId) return;
+
+  const subId = document.getElementById('edit-sub').value;
+  const kwh = parseFloat(document.getElementById('edit-kwh').value);
+  const date = document.getElementById('edit-date').value;
+  const time = document.getElementById('edit-time').value;
+  const user = document.getElementById('edit-user').value.trim();
+  const note = document.getElementById('edit-note').value.trim();
+
+  // ตรวจสอบข้อมูลเบื้องต้น
+  if (!subId || isNaN(kwh) || !date) {
+    return toast('⚠️ กรุณากรอกข้อมูล มิเตอร์ และวันที่ ให้ครบถ้วน', 'err');
+  }
+
+  // ดึงรายละเอียดของตู้เพื่อหาชื่อและโซนล่าสุดมาอัปเดตลงเรคคอร์ด
+  const sub = subs.find(s => s.id === subId);
+  const subName = sub ? sub.name : '';
+  const zone = sub ? sub.zone : 'Custom';
+
+  // ค้นหาตำแหน่งอินเดกซ์ใน Array หลัก เพื่อสลับเปลี่ยนข้อมูล
+  const idx = records.findIndex(x => x.id === currentEditingRecordId);
+  if (idx === -1) return toast('❌ ไม่พบรายการที่จะแก้ไขในฐานข้อมูล', 'err');
+
+  // 📝 อัปเดตข้อมูลชุดใหม่เข้าไปแทนที่ค่าดิบ (เก็บแค่ค่ามิเตอร์ kwh สะสม)
+  records[idx] = {
+    ...records[idx],
+    subId,
+    subName,
+    zone,
+    kwh,
+    date,
+    time,
+    user,
+    note
+  };
+
+  // 🔄 💡 [ไฮไลต์สำคัญ] สั่ง Re-Calculate คิดค่าไฟใช้ไปย้อนหลังใหม่ยกแผง On-the-fly!
+  // คลื่น ripple effect จะวิ่งลบเลขใหม่ให้ตู้ไฟตู้นั้นอัตโนมัติทันที
+  records = computeAllUsedValues(records);
+
+  // เซฟลง LocalStorage ในเครื่องก่อนเพื่อความปลอดภัย
+  persist();
+  
+  // ปิดหน้าต่างและอัปเดตรีเฟรชหน้าจอ
+  closeEdit();
+  renderAll();
+  applyFilter();
+  toast('✏️ แก้ไขข้อมูลสำเร็จ (เซฟในเครื่องแล้ว)', 'ok');
+
+  // 🌐 ยิงข้อมูลอัปเดตขึ้น Google Sheets
+  setSyncStatus('busy', 'กำลังอัปเดตข้อมูลรายการลง Google Sheets...');
+  try {
+    const res = await apiPost({ action: 'updateRecord', record: records[idx] });
+    if (res && res.success) {
+      setSyncStatus('ok', 'ซิงค์ข้อมูลกับ Google Sheets สำเร็จ');
+    } else {
+      throw new Error(res.error || 'Server rejected');
+    }
+  } catch (e) {
+    setSyncStatus('error', 'เซฟลงชีทไม่สำเร็จ (แต่เก็บในแคชเครื่องเรียบร้อย)');
+  }
+}
+   
 async function deleteRecord(id){
   if(!confirm('ลบรายการนี้?')) return;
   const subId=records.find(r=>r.id===id)?.subId;
@@ -1194,33 +1396,94 @@ async function deleteRecord(id){
    FIX #1: EDIT SUBSTATION
 ══════════════════════════════════════════════════════ */
 function openEditSub(i){
-  editSubIndex=i;
-  const s=subs[i];
-  document.getElementById('esub-id').value=s.id;
-  document.getElementById('esub-name').value=s.name;
-  document.getElementById('esub-zone').value=s.zone;
-  document.getElementById('esub-decimal').value=String(s.decimal!==undefined?s.decimal:2);
-  document.getElementById('edit-sub-modal').classList.add('open');
+  editSubIndex = i;
+  const s = subs[i];
+  
+  // นำข้อมูลเดิมไปหยอดใส่ฟิลด์ต่างๆ
+  document.getElementById('esub-id').value = s.id;
+  document.getElementById('esub-name').value = s.name;
+  document.getElementById('esub-zone').value = s.zone;
+  document.getElementById('esub-decimal').value = String(s.decimal !== undefined ? s.decimal : 2);
+  
+  // ดึงค่าตัวคูณ (ถ้ายังไม่มีในระบบ ให้ Default เป็น 1)
+  document.getElementById('esub-multiplier').value = String(s.multiplier !== undefined ? s.multiplier : 1);
+  
+  // สั่งเปิดแสดงผล Modal
+  const modal = document.getElementById('edit-sub-modal');
+  modal.style.display = 'flex';
+  modal.classList.add('open');
 }
-function closeEditSub(){ document.getElementById('edit-sub-modal').classList.remove('open'); editSubIndex=null; }
-function closeEditSubIf(e){ if(e.target.id==='edit-sub-modal') closeEditSub(); }
+   
+function closeEditSub(){
+  editSubIndex = null;
+  const modal = document.getElementById('edit-sub-modal');
+  modal.style.display = 'none';
+  modal.classList.remove('open');
+}
+   
+function closeEditSubIf(event){
+  if(event.target.id === 'edit-sub-modal'){
+    closeEditSub();
+  }
+}
 
-function saveEditSub(){
-  if(editSubIndex===null) return;
-  const name=document.getElementById('esub-name').value.trim();
-  const zone=document.getElementById('esub-zone').value.trim();
-  const decimal=parseInt(document.getElementById('esub-decimal').value);
-  if(!name||!zone) return toast('กรอกชื่อและ Zone ด้วย','err');
-  const sid=subs[editSubIndex].id;
-  subs[editSubIndex]={...subs[editSubIndex],name,zone,decimal};
+async function saveEditSub(){
+  if(editSubIndex === null) return;
+  
+  const name = document.getElementById('esub-name').value.trim();
+  const zone = document.getElementById('esub-zone').value.trim();
+  const decimal = parseInt(document.getElementById('esub-decimal').value);
+  const multiplier = parseFloat(document.getElementById('esub-multiplier').value) || 1;
+  
+  // Validate ข้อมูลเบื้องต้น
+  if(!name || !zone){
+    return toast('⚠️ กรุณากรอกชื่อตู้และ Zone พื้นที่ให้ครบถ้วน', 'err');
+  }
+  if(multiplier <= 0){
+    return toast('⚠️ ตัวคูณมิเตอร์ต้องมีค่ามากกว่า 0', 'err');
+  }
+  
+  const sid = subs[editSubIndex].id;
+  
+  // 📝 อัปเดตข้อมูลลงฐานข้อมูลชั่วคราวในเว็บ (Array: subs)
+  subs[editSubIndex] = {
+    ...subs[editSubIndex],
+    name,
+    zone,
+    decimal,
+    multiplier
+  };
+  
+  // เซฟทับลง LocalStorage ในเบราว์เซอร์ทันทีกันข้อมูลหาย
   persist();
   closeEditSub();
-  toast(`✅ อัปเดต ${sid} แล้ว (ทศนิยม: ${decimal})`,'ok');
-  renderSubList(); renderZoneAreas(); populateDDs();
-  if(activeSub&&activeSub.id===sid){
-    activeSub=subs[editSubIndex];
-    document.getElementById('banner-name').textContent=`${activeSub.name} · ${activeSub.zone}`;
-    updateMeterSummary(); renderRecent();
+  
+  // 🔄 สั่งรัน On-the-fly Recalculate ใหม่ทั้งหมด 
+  // เผื่อกรณีเปลี่ยนตัวคูณ ค่าประวัติย้อนหลัง (used) ของตู้นี้จะคำนวณใหม่ยกแผงให้ถูกต้องทันที
+  if (typeof records !== 'undefined') {
+    records = computeAllUsedValues(records);
+    persist();
+  }
+
+  // อัปเดตรีเฟรชหน้าจอคอมโพเนนต์ต่างๆ ที่เกี่ยวข้อง
+  renderSubList(); 
+  renderZoneAreas(); 
+  populateDDs();
+  if (typeof renderAll === 'function') renderAll();
+  
+  toast(`✅ อัปเดตโครงสร้างตู้ ${sid} เรียบร้อย`, 'ok');
+  
+  // 🌐 [ซิงค์ข้อมูล] ส่งค่าคอนฟิกไปบันทึกถาวรที่ฐานข้อมูลแผ่นชีท (Google Sheets)
+  setSyncStatus('busy', 'กำลังซิงค์แผนผังตู้ลง Google Sheets...');
+  try {
+    const res = await apiPost({ action: 'updateSubConfig', sub: subs[editSubIndex] });
+    if (res && res.success) {
+      setSyncStatus('ok', 'บันทึกข้อมูลตู้ลงแผ่นชีทสำเร็จ');
+    } else {
+      throw new Error(res.error || 'Sheets rejected');
+    }
+  } catch(e) {
+    setSyncStatus('error', 'บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชเครื่องแล้ว)');
   }
 }
 
