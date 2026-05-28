@@ -1310,68 +1310,48 @@ function closeEditIf(event) {
   }
 }
 
-async function saveEdit() {
-  if (!currentEditingRecordId) return;
-
-  const subId = document.getElementById('edit-sub').value;
-  const kwh = parseFloat(document.getElementById('edit-kwh').value);
-  const date = document.getElementById('edit-date').value;
-  const time = document.getElementById('edit-time').value;
-  const user = document.getElementById('edit-user').value.trim();
-  const note = document.getElementById('edit-note').value.trim();
-
-  // ตรวจสอบข้อมูลเบื้องต้น
-  if (!subId || isNaN(kwh) || !date) {
-    return toast('⚠️ กรุณากรอกข้อมูล มิเตอร์ และวันที่ ให้ครบถ้วน', 'err');
-  }
-
-  // ดึงรายละเอียดของตู้เพื่อหาชื่อและโซนล่าสุดมาอัปเดตลงเรคคอร์ด
-  const sub = subs.find(s => s.id === subId);
-  const subName = sub ? sub.name : '';
-  const zone = sub ? sub.zone : 'Custom';
-
-  // ค้นหาตำแหน่งอินเดกซ์ใน Array หลัก เพื่อสลับเปลี่ยนข้อมูล
-  const idx = records.findIndex(x => x.id === currentEditingRecordId);
-  if (idx === -1) return toast('❌ ไม่พบรายการที่จะแก้ไขในฐานข้อมูล', 'err');
-
-  // 📝 อัปเดตข้อมูลชุดใหม่เข้าไปแทนที่ค่าดิบ (เก็บแค่ค่ามิเตอร์ kwh สะสม)
-  records[idx] = {
-    ...records[idx],
-    subId,
-    subName,
-    zone,
-    kwh,
-    date,
-    time,
-    user,
-    note
-  };
-
-  // 🔄 💡 [ไฮไลต์สำคัญ] สั่ง Re-Calculate คิดค่าไฟใช้ไปย้อนหลังใหม่ยกแผง On-the-fly!
-  // คลื่น ripple effect จะวิ่งลบเลขใหม่ให้ตู้ไฟตู้นั้นอัตโนมัติทันที
-  records = computeAllUsedValues(records);
-
-  // เซฟลง LocalStorage ในเครื่องก่อนเพื่อความปลอดภัย
-  persist();
+function saveEditSub() {
+  // 🔄 1. ตรวจสอบกลุ่มดึงค่าข้อมูลตู้ (เปลี่ยนมาใช้ไอดี esub- ให้ตรงกับ HTML)
+  const subId = document.getElementById('esub-id').value;
+  const name = document.getElementById('esub-name').value;
+  const zone = document.getElementById('esub-zone').value;
   
-  // ปิดหน้าต่างและอัปเดตรีเฟรชหน้าจอ
-  closeEdit();
-  renderAll();
-  applyFilter();
-  toast('✏️ แก้ไขข้อมูลสำเร็จ (เซฟในเครื่องแล้ว)', 'ok');
+  // 🎯 บรรทัด 1434 ที่พังอยู่ ให้เปลี่ยนมาใช้ไอดี 2 ตัวนี้ครับ
+  const decimal = parseInt(document.getElementById('esub-decimal').value) || 0;
+  const multiplier = parseFloat(document.getElementById('esub-multiplier').value) || 1;
 
-  // 🌐 ยิงข้อมูลอัปเดตขึ้น Google Sheets
-  setSyncStatus('busy', 'กำลังอัปเดตข้อมูลรายการลง Google Sheets...');
-  try {
-    const res = await apiPost({ action: 'updateRecord', record: records[idx] });
+  // 🔄 2. นำค่าอัปเดตใส่กลับเข้าไปในอาร์เรย์(โค้ดเดิมที่มีอยู่แล้ว)
+  subs[editSubIndex].name = name;
+  subs[editSubIndex].zone = zone;
+  subs[editSubIndex].decimal = decimal;
+  subs[editSubIndex].multiplier = multiplier;
+
+  // บันทึกลง Cache เครื่อง
+  persist(); 
+  renderSubs(); // อัปเดตหน้าตารางใหม่
+  closeEditSub(); // ปิดหน้าต่าง Modal
+
+  // 🚀 3. ยิงข้อมูลไปอัปเดตที่ Google Sheets 
+  // (ตรวจสอบให้แน่ใจว่ามัดโครงสร้างส่งไปตามนี้)
+  fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'updateSubConfig',
+      sub: subs[editSubIndex]
+    })
+  })
+  .then(res => res.json())
+  .then(res => {
     if (res && res.success) {
-      setSyncStatus('ok', 'ซิงค์ข้อมูลกับ Google Sheets สำเร็จ');
+      showToast("✅ บันทึกข้อมูลตู้ลงแผ่นชีทสำเร็จ", "success");
     } else {
-      throw new Error(res.error || 'Server rejected');
+      showToast("❌ บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชเครื่องแล้ว)", "danger");
     }
-  } catch (e) {
-    setSyncStatus('error', 'เซฟลงชีทไม่สำเร็จ (แต่เก็บในแคชเครื่องเรียบร้อย)');
-  }
+  })
+  .catch(e => {
+    console.error(e);
+    showToast("❌ บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชเครื่องแล้ว)", "danger");
+  });
 }
    
 async function deleteRecord(id){
@@ -1431,8 +1411,8 @@ async function saveEditSub(){
   
   const name = document.getElementById('esub-name').value.trim();
   const zone = document.getElementById('esub-zone').value.trim();
-  const decimal = parseInt(document.getElementById('ไอดีกล่องทศนิยมของพี่').value) || 0;
-  const multiplier = parseFloat(document.getElementById('ไอดีกล่องตัวคูณของพี่').value) || 1;
+  const decimal = parseInt(document.getElementById('esub-decimal').value) || 0;
+  const multiplier = parseFloat(document.getElementById('esub-multiplier').value) || 1;
   
   // Validate ข้อมูลเบื้องต้น
   if(!name || !zone){
