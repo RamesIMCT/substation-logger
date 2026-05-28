@@ -623,7 +623,7 @@ tr:hover td{background:var(--surface-2)}
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxkxYrUeqbt8Hd6fcgmynvAWC5eysNJes8C3rQSzjodARVlvx_0Fmf-RRkmB0CGqD9J/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwtt_VJwan3j46Q6RbiS18Iwc4kkQ3mPbFF9IvqdUlrANIbiivB0Xxq3n02kMP_5nm5xA/exec';
 const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
 const ADMIN_PASS = '1234';
    // ── ตัวแปรสำหรับระบบตัวกรองและการแบ่งหน้า (ใส่เพิ่มเข้าไป) ──
@@ -667,16 +667,20 @@ const INIT_SUBS = [
 /* ══════════════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════════════ */
-let subs     = jLoad('subs') || INIT_SUBS;
-let records  = jLoad('records') || [];
+let subs         = jLoad('subs') || INIT_SUBS;
+let records      = jLoad('records') || [];
 // FIX #4: persistent filter state
 let activeFilter = { sub:'', user:'', from:'', to:'' };
-let appMode  = 'basic';
-let activeSub = null;
+let appMode      = 'basic';
+let activeSub    = null;
 let editRecordId = null;
 let editSubIndex = null; // FIX #1
-let isConnected = false;
+let isConnected  = false;
 let currentEditingRecordId = null;
+
+// 🔒 ระบบล็อกอิน (ดึงข้อมูลแบบ Dynamic จาก Google Sheets)
+let serverUsers  = [];  // คลังเก็บรายชื่อและรหัสผ่าน
+let currentUser  = '';  // เก็บชื่อพนักงานที่ล็อกอินสำเร็จ 
 /* ══════════════════════════════════════════════════════
    UTILITIES
 ══════════════════════════════════════════════════════ */
@@ -711,31 +715,51 @@ function fmtNum(val,subId){
 }
    
 // 🎯 1. ฟังก์ชันคำ Login
-function handleLogin() {
-  const uInput = document.getElementById('login-user').value.trim();
-  const pInput = document.getElementById('login-pass').value;
-  const errBox = document.getElementById('login-err');
+// 🔒 ฟังก์ชันตรวจสอบการล็อกอินฝั่งหน้าบ้าน
+function handleLogin(e) {
+  if (e) e.preventDefault(); // ป้องกันหน้าเว็บรีเฟรชตัวเองถ้าใช้แท็ก <form>
+
+  // ดึงค่าจากช่อง Input (ปรับ ID ให้ตรงกับหน้าจอของพี่ม็อกนะครับ)
+  const userEl = document.getElementById('login-username') || document.getElementById('username');
+  const passEl = document.getElementById('login-password') || document.getElementById('password');
   
-  // กรณีโหลดข้อมูลจากชีทไม่สำเร็จหรือออฟไลน์ ให้ใช้สิทธิ์สำรองเป็นแอดมินหลัก (ADMIN_PASS = '1234')
-  if (serverUsers.length === 0) {
-    if (uInput === 'admin' && pInput === ADMIN_PASS) {
-      document.getElementById('login-gate').style.display = 'none';
-      toast('🔓 เข้าใช้งานด้วยบัญชีสำรอง (Offline Mode)','warn');
-      return;
-    }
+  if (!userEl || !passEl) {
+    console.error("ไม่พบ Element ช่องกรอก Username หรือ Password ในหน้า HTML");
+    return;
   }
 
-  // ค้นหาบัญชีผู้ใช้ในรายชื่อที่ดึงมาจาก Google Sheets
-  const match = serverUsers.find(x => x.username === uInput && x.password === String(pInput));
-  
-  if (match) {
-    document.getElementById('login-gate').style.display = 'none';
-    // เอาชื่อผู้ล็อกอินไปใส่ในช่อง "ชื่อผู้จดบันทึก" อัตโนมัติเลยเพื่อความสะดวก
-    if(document.getElementById('in-user')) document.getElementById('in-user').value = match.name || uInput;
-    toast(`👋 ยินดีต้อนรับคุณ ${match.name || uInput}`,'ok');
+  const userVal = userEl.value.trim().toLowerCase();
+  const passVal = passEl.value;
+
+  // 1. เคสระบบยังโหลดข้อมูลจาก Sheets ไม่เสร็จ
+  if (!serverUsers || serverUsers.length === 0) {
+    alert("⏳ กำลังโหลดข้อมูลบัญชีจาก Google Sheets... กรุณารอสักครู่แล้วลองกดใหม่ครับ");
+    return;
+  }
+
+  // 2. ค้นหาชื่อและรหัสผ่านที่ตรงกันในฐานข้อมูล
+  const matchedUser = serverUsers.find(u => u.username.toLowerCase() === userVal && String(u.password) === passVal);
+
+  if (matchedUser) {
+    // อัปเดตสถานะผู้ใช้งานปัจจุบัน
+    currentUser = matchedUser.name; 
+    
+    // 🔓 ซ่อนหน้าจอ Login Gate และเปิดหน้า Dashboard (ปรับ ID ตามหน้าจอจริง)
+    const loginGate = document.getElementById('login-gate') || document.getElementById('loginModal');
+    if (loginGate) loginGate.style.display = 'none';
+
+    alert(`🔓 ยินดีต้อนรับครับ คุณ${matchedUser.name} !`);
+    
+    // สั่งเปิดหน้าแรกของ Dashboard ทันทีหลังจากล็อกอินผ่าน
+    if (typeof goTab === 'function') goTab('summary'); 
+    
   } else {
-    errBox.style.display = 'block';
-    errBox.textContent = '❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง';
+    // ❌ เคสกรอกผิด/มั่ว: ต้องแจ้งเตือนให้ผู้ใช้รู้ตัว ไม่ปล่อยให้นิ่งเงียบ
+    alert("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง! (ลองใช้ admin / 1234 หรือ mok / isuzu2026)");
+    
+    // เคลียร์ช่องรหัสผ่านให้กรอกใหม่
+    passEl.value = '';
+    passEl.focus();
   }
 }
 
@@ -893,11 +917,15 @@ function toggleTheme(){
 /* ══════════════════════════════════════════════════════
    API
 ══════════════════════════════════════════════════════ */
-async function apiGet(){
-  const res=await fetch(API_URL+'?action=getAll');
-  if(!res.ok) throw new Error('HTTP '+res.status);
-  return res.json();
+function apiGet() {
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(data => resolve(data))
+      .withFailureHandler(err => reject(err))
+      .getGlobalData(); // วิ่งไปเรียกฟังก์ชัน getGlobalData() ใน รหัส.gs
+  });
 }
+   
 async function apiPost(body){
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),12000);
@@ -926,41 +954,25 @@ function setSyncStatus(status,msg){
   }
 }
 
-async function loadFromServer(){
-  setSyncStatus('busy','กำลังโหลดจาก Google Sheets...');
-  try{
-    const data=await apiGet();
-    if(!data||data.error) throw new Error(data?data.error:'No Response');
-    if (data.records) {
-     const mapped = data.records.map(r => ({ ...r, kwh: parseFloat(r.kwh) || 0 }));
-     records = computeAllUsedValues(mapped);
-   }
-    if(data.subs&&data.subs.length>0){
-      subs=data.subs.map(s=>({...s,decimal:s.decimal!==undefined?s.decimal:2, multiplier:s.multiplier!==undefined?s.multiplier:1}));
-    }
-    
-    // ── 🔒 [ดึงข้อมูลบัญชี] นำรายชื่อผู้ใช้จากชีทมาลงระบบล็อกอิน ──
-    if(data.users) {
-      serverUsers = data.users; // โครงสร้างในชีทควรส่งเป็น JSON Array: [{username:'...', password:'...', name:'...'}, ...]
-    }
-    // ──────────────────────────────────────────────────────────────
-
-    persist();
-    isConnected=true;
-    setSyncStatus('ok',`โหลดสำเร็จ — ${records.length} records`);
-    document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
-    
-    renderAll();
-    applyFilter();
-    
-  }catch(e){
-    isConnected=false;
-    setSyncStatus('error','โหลดไม่ได้: '+e.message);
-    document.getElementById('hdr-small').textContent='ใช้ข้อมูล Offline';
-    applyFilter(); 
-  }
+// ── แก้ไขจุดนี้ (ประมาณบรรทัด 682) ──
+function loadFromServer() {
+  // สั่งให้ระบบวิ่งไปเรียกฟังก์ชัน getGlobalData() ที่อยู่ใน รหัส.gs หลังบ้าน
+  google.script.run
+    .withSuccessHandler(function(data) {
+      // 💡 โค้ดเดิมของพี่ม็อกที่อยู่ด้านใน
+      rawRecords = data.records ? data.records.reverse() : [];
+      setupFilterDropdowns(data.subs || []);
+      applyFilter();
+      
+      console.log("โหลดข้อมูลจาก Server สำเร็จ:", data);
+    })
+    .withFailureHandler(function(err) {
+      console.error("โหลดข้อมูลล้มเหลว:", err);
+      alert("ไม่สามารถดึงข้อมูลจาก Server ได้: " + err);
+    })
+    .getGlobalData();
 }
-
+   
 async function testConn(){
   setSyncStatus('busy','กำลังทดสอบ...');
   const box=document.getElementById('api-status');
