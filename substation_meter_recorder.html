@@ -623,7 +623,7 @@ tr:hover td{background:var(--surface-2)}
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzT3sAbijthS7VfSis0L9UhnM2jnGkxSSqrm71H9hydrIVxUh3DVyw-5lTRo5YyqlU9vA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxwQMzzRhGmOQSV5R-ye4Ps9lxroIzxbYDRbiL16E8PgWiT1zNY6PhKKKuwsym8tIT1Kw/exec';
 const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
 const ADMIN_PASS = '1234';
 
@@ -1310,48 +1310,47 @@ function closeEditIf(event) {
   }
 }
 
-function saveEditSub() {
-  // 🔄 1. ตรวจสอบกลุ่มดึงค่าข้อมูลตู้ (เปลี่ยนมาใช้ไอดี esub- ให้ตรงกับ HTML)
-  const subId = document.getElementById('esub-id').value;
-  const name = document.getElementById('esub-name').value;
-  const zone = document.getElementById('esub-zone').value;
+async function saveEditSub(){
+  if(editSubIndex === null) return;
   
-  // 🎯 บรรทัด 1434 ที่พังอยู่ ให้เปลี่ยนมาใช้ไอดี 2 ตัวนี้ครับ
+  const name = document.getElementById('esub-name').value.trim();
+  const zone = document.getElementById('esub-zone').value.trim();
   const decimal = parseInt(document.getElementById('esub-decimal').value) || 0;
   const multiplier = parseFloat(document.getElementById('esub-multiplier').value) || 1;
-
-  // 🔄 2. นำค่าอัปเดตใส่กลับเข้าไปในอาร์เรย์(โค้ดเดิมที่มีอยู่แล้ว)
-  subs[editSubIndex].name = name;
-  subs[editSubIndex].zone = zone;
-  subs[editSubIndex].decimal = decimal;
-  subs[editSubIndex].multiplier = multiplier;
-
-  // บันทึกลง Cache เครื่อง
-  persist(); 
-  renderSubs(); // อัปเดตหน้าตารางใหม่
-  closeEditSub(); // ปิดหน้าต่าง Modal
-
-  // 🚀 3. ยิงข้อมูลไปอัปเดตที่ Google Sheets 
-  // (ตรวจสอบให้แน่ใจว่ามัดโครงสร้างส่งไปตามนี้)
-  fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'updateSubConfig',
-      sub: subs[editSubIndex]
-    })
-  })
-  .then(res => res.json())
-  .then(res => {
+  
+  if(!name || !zone) return toast('⚠️ กรุณากรอกชื่อตู้และ Zone ให้ครบ', 'err');
+  if(multiplier <= 0) return toast('⚠️ ตัวคูณต้องมากกว่า 0', 'err');
+  
+  // ✅ เก็บ object และ id ก่อน close (ป้องกัน index หาย)
+  const updatedSub = {
+    ...subs[editSubIndex],
+    name, zone, decimal, multiplier
+  };
+  
+  subs[editSubIndex] = updatedSub;
+  persist();
+  closeEditSub(); // ← ปิดได้แล้ว เพราะไม่ต้องใช้ editSubIndex อีก
+  
+  if (typeof records !== 'undefined') {
+    records = computeAllUsedValues(records);
+    persist();
+  }
+  renderSubList(); renderZoneAreas(); populateDDs();
+  if (typeof renderAll === 'function') renderAll();
+  toast(`✅ อัปเดตตู้ ${updatedSub.id} เรียบร้อย`, 'ok');
+  
+  setSyncStatus('busy', 'กำลังซิงค์ลง Google Sheets...');
+  try {
+    // ✅ ใช้ updatedSub แทน subs[editSubIndex]
+    const res = await apiPost({ action: 'updateSubConfig', sub: updatedSub });
     if (res && res.success) {
-      showToast("✅ บันทึกข้อมูลตู้ลงแผ่นชีทสำเร็จ", "success");
+      setSyncStatus('ok', 'บันทึกข้อมูลตู้ลงแผ่นชีทสำเร็จ');
     } else {
-      showToast("❌ บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชเครื่องแล้ว)", "danger");
+      throw new Error(res?.error || 'Sheets rejected');
     }
-  })
-  .catch(e => {
-    console.error(e);
-    showToast("❌ บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชเครื่องแล้ว)", "danger");
-  });
+  } catch(e) {
+    setSyncStatus('error', 'บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชแล้ว)');
+  }
 }
    
 async function deleteRecord(id){
@@ -1403,66 +1402,6 @@ function closeEditSub(){
 function closeEditSubIf(event){
   if(event.target.id === 'edit-sub-modal'){
     closeEditSub();
-  }
-}
-
-async function saveEditSub(){
-  if(editSubIndex === null) return;
-  
-  const name = document.getElementById('esub-name').value.trim();
-  const zone = document.getElementById('esub-zone').value.trim();
-  const decimal = parseInt(document.getElementById('esub-decimal').value) || 0;
-  const multiplier = parseFloat(document.getElementById('esub-multiplier').value) || 1;
-  
-  // Validate ข้อมูลเบื้องต้น
-  if(!name || !zone){
-    return toast('⚠️ กรุณากรอกชื่อตู้และ Zone พื้นที่ให้ครบถ้วน', 'err');
-  }
-  if(multiplier <= 0){
-    return toast('⚠️ ตัวคูณมิเตอร์ต้องมีค่ามากกว่า 0', 'err');
-  }
-  
-  const sid = subs[editSubIndex].id;
-  
-  // 📝 อัปเดตข้อมูลลงฐานข้อมูลชั่วคราวในเว็บ (Array: subs)
-  subs[editSubIndex] = {
-    ...subs[editSubIndex],
-    name,
-    zone,
-    decimal,
-    multiplier
-  };
-  
-  // เซฟทับลง LocalStorage ในเบราว์เซอร์ทันทีกันข้อมูลหาย
-  persist();
-  closeEditSub();
-  
-  // 🔄 สั่งรัน On-the-fly Recalculate ใหม่ทั้งหมด 
-  // เผื่อกรณีเปลี่ยนตัวคูณ ค่าประวัติย้อนหลัง (used) ของตู้นี้จะคำนวณใหม่ยกแผงให้ถูกต้องทันที
-  if (typeof records !== 'undefined') {
-    records = computeAllUsedValues(records);
-    persist();
-  }
-
-  // อัปเดตรีเฟรชหน้าจอคอมโพเนนต์ต่างๆ ที่เกี่ยวข้อง
-  renderSubList(); 
-  renderZoneAreas(); 
-  populateDDs();
-  if (typeof renderAll === 'function') renderAll();
-  
-  toast(`✅ อัปเดตโครงสร้างตู้ ${sid} เรียบร้อย`, 'ok');
-  
-  // 🌐 [ซิงค์ข้อมูล] ส่งค่าคอนฟิกไปบันทึกถาวรที่ฐานข้อมูลแผ่นชีท (Google Sheets)
-  setSyncStatus('busy', 'กำลังซิงค์แผนผังตู้ลง Google Sheets...');
-  try {
-    const res = await apiPost({ action: 'updateSubConfig', sub: subs[editSubIndex] });
-    if (res && res.success) {
-      setSyncStatus('ok', 'บันทึกข้อมูลตู้ลงแผ่นชีทสำเร็จ');
-    } else {
-      throw new Error(res.error || 'Sheets rejected');
-    }
-  } catch(e) {
-    setSyncStatus('error', 'บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชเครื่องแล้ว)');
   }
 }
 
