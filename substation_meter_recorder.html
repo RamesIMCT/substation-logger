@@ -923,21 +923,40 @@ function setSyncStatus(status,msg){
 
 // ── แก้ไขจุดนี้ (ประมาณบรรทัด 682) ──
 function loadFromServer() {
-  // สั่งให้ระบบวิ่งไปเรียกฟังก์ชัน getGlobalData() ที่อยู่ใน รหัส.gs หลังบ้าน
-  google.script.run
-    .withSuccessHandler(function(data) {
-      // 💡 โค้ดเดิมของพี่ม็อกที่อยู่ด้านใน
-      rawRecords = data.records ? data.records.reverse() : [];
-      setupFilterDropdowns(data.subs || []);
-      applyFilter();
-      
-      console.log("โหลดข้อมูลจาก Server สำเร็จ:", data);
+  console.log("⏳ กำลังดึงข้อมูลพนักงานและรายชื่อตู้จาก Google Sheets...");
+  
+  // ใช้ fetch ยิงไปหากล่อง API_URL แทนการใช้ google.script.run
+  fetch(API_URL)
+    .then(response => {
+      if (!response.ok) throw new Error('เครือข่ายมีปัญหาหรือไม่ได้รับอนุญาต Access');
+      return response.json();
     })
-    .withFailureHandler(function(err) {
-      console.error("โหลดข้อมูลล้มเหลว:", err);
-      alert("ไม่สามารถดึงข้อมูลจาก Server ได้: " + err);
+    .then(data => {
+      if (data) {
+        // 📥 1. เติมข้อมูลพนักงานเข้าคลัง serverUsers
+        if (data.users && Array.isArray(data.users)) {
+          serverUsers = data.users;
+        }
+        
+        // 📥 2. เติมข้อมูลตู้ Substation ล่าสุดเข้าคลัง subs
+        if (data.subs && Array.isArray(data.subs)) {
+          subs = data.subs;
+        }
+        
+        // 💾 3. บันทึกลงความจำเครื่อง (Cache) ทันที
+        persist();
+        isConnected = true;
+        console.log("✅ ซิงค์ข้อมูลกับ Google Sheets สำเร็จเรียบร้อย!", data);
+        
+        // 🔄 4. อัปเดต UI บนหน้าเว็บ (ถ้ามีฟังก์ชันสำหรับวาดตาราง/ดรอปดาวน์ใหม่ ให้ใส่ตรงนี้ครับ)
+        if (typeof renderDropdowns === 'function') renderDropdowns(); 
+        if (typeof buildSubCards === 'function') buildSubCards();
+      }
     })
-    .getGlobalData();
+    .catch(error => {
+      console.error("❌ ดึงข้อมูลออนไลน์ไม่สำเร็จ (ระบบจะดึงจาก Cache เก่ามาสแตนด์บายให้ก่อน):", error);
+      isConnected = false;
+    });
 }
    
 async function testConn(){
