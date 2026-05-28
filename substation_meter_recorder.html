@@ -679,29 +679,8 @@ function fmtNum(val,subId){
   return parseFloat(val||0).toFixed(dec);
 }
    
-function(data) {
-  rawRecords = data.records ? data.records.reverse() : []; 
-  setupFilterDropdowns(data.subs || []); 
-  applyFilter(); 
-}
 // 🎯 1. ฟังก์ชันคำนวณตัวกรอง (Filter Logic)
-function applyFilter() {
-  const subVal = document.getElementById('fl-sub').value;    // แก้ ID ให้ตรงกับ HTML เดิม (fl-sub)
-  const userVal = document.getElementById('fl-user').value.trim().toLowerCase(); // เพิ่มตัวกรองชื่อผู้บันทึก
-  const startVal = document.getElementById('fl-from').value;  // แก้ ID ให้ตรงกับ HTML เดิม (fl-from)
-  const endVal = document.getElementById('fl-to').value;      // แก้ ID ให้ตรงกับ HTML เดิม (fl-to)
 
-  filteredRecords = rawRecords.filter(r => {
-    if (subVal && r.subId !== subVal) return false;
-    if (userVal && !String(r.user).toLowerCase().includes(userVal)) return false;
-    if (startVal && r.date < startVal) return false;
-    if (endVal && r.date > endVal) return false;
-    return true;
-  });
-
-  currentPage = 1; 
-  renderTable();   
-}
 
 // 🎯 2. ฟังก์ชันปรับขนาดแถวแสดงผลเมื่อคนดูเลือกเปลี่ยนจำนวนแถว
 function onPageSizeChange() {
@@ -750,13 +729,15 @@ function renderPaginationControls(totalItems) {
 }
    
 function renderTable() {
-  // แก้จาก tableBody เป็น main-body ตาม HTML จริงของคุณม็อก
   const tbody = document.getElementById('main-body'); 
+  const emptyBox = document.getElementById('main-empty');
+  if (!tbody || !emptyBox) return;
+
   tbody.innerHTML = ''; 
 
   const total = filteredRecords.length;
   
-  // หั่นข้อมูลแสดงผลเฉพาะหน้า
+  // หั่นข้อมูลแสดงผลเฉพาะหน้า (Page Size)
   const startIdx = (currentPage - 1) * pageSize;
   const endIdx = Math.min(startIdx + pageSize, total);
   const pageItems = filteredRecords.slice(startIdx, endIdx); 
@@ -766,22 +747,37 @@ function renderTable() {
   if(document.getElementById('rowStart')) document.getElementById('rowStart').textContent = total > 0 ? startIdx + 1 : 0;
   if(document.getElementById('rowEnd')) document.getElementById('rowEnd').textContent = endIdx;
 
-  // จัดการกรณีไม่มีข้อมูลให้เปิด-ปิดตาม ID เดิมของคุณม็อก
-  const emptyBox = document.getElementById('main-empty');
+  // ปรับจำนวนนับเมนูด้านบนตาราง (Data Count & Badge)
+  const count = document.getElementById('data-count');
+  if (count) count.textContent = `(${total} รายการ${isFilterActive() ? ' — filtered' : ''})`;
+  const badge = document.getElementById('filter-badge');
+  if (badge) badge.style.display = isFilterActive() ? 'inline-flex' : 'none';
+
+  // จัดการกรณีไม่มีข้อมูลให้เปิด-ปิดตามเงื่อนไขเดิม
   if (total === 0) {
-    if(emptyBox) emptyBox.style.display = 'block';
+    emptyBox.style.display = 'block';
     if(document.getElementById('pageNav')) document.getElementById('pageNav').innerHTML = '';
     return;
   } else {
-    if(emptyBox) emptyBox.style.display = 'none';
+    emptyBox.style.display = 'none';
   }
 
-  // ── วนลูปวาดตาราง (ใช้โค้ดสร้าง TR > TD เดิมของคุณม็อกได้เลย แต่เปลี่ยนมาลูป pageItems) ──
-  pageItems.forEach(r => {
-      // ยกโค้ด append แถวตารางเดิมของคุณม็อกมาใส่ตรงนี้
-  });
+  // ── 🌟 ดึงข้อมูลเฉพาะของหน้าปัจจุบัน (pageItems) มาวาดลงตารางตู้ Sub ──
+  tbody.innerHTML = pageItems.map(r => `<tr>
+    <td class="td-sub">${r.subId}</td>
+    <td>${fmtDate(r.date)}</td>
+    <td>${fmtTime(r.time)}</td>
+    <td class="td-kwh">${fmtNum(r.kwh, r.subId)}</td>
+    <td class="td-used"><strong>${fmtNum(r.used || 0, r.subId)}</strong></td>
+    <td class="desktop-only">${r.user || '—'}</td>
+    <td class="desktop-only">${r.note || '—'}</td>
+    <td><div class="td-act">
+      <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
+    </div></td>
+  </tr>`).join('');
 
-  // วาดเลขหน้าย่อย
+  // วาดปุ่มเลขหน้าย่อยด้านล่าง
   renderPaginationControls(total);
 }
 
@@ -886,11 +882,19 @@ async function loadFromServer(){
     isConnected=true;
     setSyncStatus('ok',`โหลดสำเร็จ — ${records.length} records`);
     document.getElementById('hdr-small').textContent='เชื่อมต่อ Google Sheets ✅';
-    renderAll();
+    
+    // ── 🌟 [จุดที่เปลี่ยน] รันของเดิมเสร็จ แล้วสั่งระบบคัดกรอง/แบ่งหน้าต่อทันที ──
+    renderAll();   // เรียกฟังก์ชันวาดแดชบอร์ด/สถิติภาพรวมตัวเดิมของคุณม็อก
+    applyFilter(); // สั่งให้ระบบคัดกรองและแบ่งหน้าตารางเริ่มทำงานต่อ
+    // ──────────────────────────────────────────────────────────────
+    
   }catch(e){
     isConnected=false;
     setSyncStatus('error','โหลดไม่ได้: '+e.message);
     document.getElementById('hdr-small').textContent='ใช้ข้อมูล Offline';
+    
+    // ── 🌟 [เพิ่มตรงนี้ด้วย] เผื่อกรณีเปิดแบบ Offline ให้ตารางยังตัดหน้าเพจได้ ──
+    applyFilter(); 
   }
 }
 
@@ -1237,41 +1241,35 @@ function isFilterActive(){
   return !!(activeFilter.sub||activeFilter.user||activeFilter.from||activeFilter.to);
 }
 
-function renderData(rows){
-  if(rows===undefined){
-    rows=isFilterActive()?getFilteredRecords():[...records];
-  }
-  rows=rows.sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
-  const body=document.getElementById('main-body');
-  const empty=document.getElementById('main-empty');
-  const count=document.getElementById('data-count');
-  if(!body||!empty) return;
-  const badge=document.getElementById('filter-badge');
-  if(badge) badge.style.display=isFilterActive()?'inline-flex':'none';
-  if(count) count.textContent=`(${rows.length} รายการ${isFilterActive()?' — filtered':''})`;
-  if(!rows.length){ empty.style.display='block'; body.innerHTML=''; return; }
-  empty.style.display='none';
-  body.innerHTML=rows.map(r=>`<tr>
-    <td class="td-sub">${r.subId}</td>
-    <td>${fmtDate(r.date)}</td>
-    <td>${fmtTime(r.time)}</td>
-    <td class="td-kwh">${fmtNum(r.kwh,r.subId)}</td>
-    <td class="td-used"><strong>${fmtNum(r.used||0,r.subId)}</strong></td>
-    <td class="desktop-only">${r.user||'—'}</td>
-    <td class="desktop-only">${r.note||'—'}</td>
-    <td><div class="td-act">
-      <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
-    </div></td>
-  </tr>`).join('');
+function renderData() {
+  applyFilter();
 }
+// 🎯 ฟังก์ชันคำนวณตัวกรอง (ปรับให้ใช้กับตัวแปร records หลักของคุณม็อก)
+function applyFilter() {
+  const subVal = document.getElementById('fl-sub').value;
+  const userVal = document.getElementById('fl-user') ? document.getElementById('fl-user').value.trim().toLowerCase() : '';
+  const startVal = document.getElementById('fl-from').value;
+  const endVal = document.getElementById('fl-to').value;
 
-function applyFilter(){
-  activeFilter.sub=document.getElementById('fl-sub').value;
-  activeFilter.user=document.getElementById('fl-user').value.trim().toLowerCase();
-  activeFilter.from=document.getElementById('fl-from').value;
-  activeFilter.to=document.getElementById('fl-to').value;
-  renderData(getFilteredRecords());
+  // ซิงค์ค่าเก็บเข้าตัวแปรระบบเดิมเพื่อให้ปุ่ม Badge และการนับจำนวนทำงานถูกจุด
+  activeFilter.sub = subVal;
+  activeFilter.user = userVal;
+  activeFilter.from = startVal;
+  activeFilter.to = endVal;
+
+  // คัดลอกข้อมูลจาก records หลักมากลับด้านเอาล่าสุดขึ้นก่อน
+  let sourceData = [...records].reverse();
+
+  filteredRecords = sourceData.filter(r => {
+    if (subVal && r.subId !== subVal) return false;
+    if (userVal && !String(r.user).toLowerCase().includes(userVal)) return false;
+    if (startVal && r.date < startVal) return false;
+    if (endVal && r.date > endVal) return false;
+    return true;
+  });
+
+  currentPage = 1; // รีเซ็ตกลับไปหน้า 1
+  renderTable();   // สั่งแสดงตารางเฉพาะหน้าเพจปัจจุบัน
 }
 
 // ฟังก์ชันล้างค่าตัวกรอง ให้ตรงกับปุ่มล้างเดิม
@@ -1312,6 +1310,9 @@ function updateBadge(){
 
 /* ══════════════════════════════════════════════════════
    FIX #3: VERTICAL DAILY BAR CHART
+══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+    FIX #3: VERTICAL DAILY BAR CHART
 ══════════════════════════════════════════════════════ */
 function renderChart(){
   const subId=document.getElementById('chart-sub').value;
@@ -1401,7 +1402,7 @@ function renderAllChart(){
 }
 
 /* ══════════════════════════════════════════════════════
-   QR
+    QR
 ══════════════════════════════════════════════════════ */
 function buildUrl(subId){ return QR_BASE_URL.replace(/\/$/,'')+' ?sub='+encodeURIComponent(subId); }
 function renderQR(){
@@ -1428,7 +1429,7 @@ function renderQR(){
 }
 
 /* ══════════════════════════════════════════════════════
-   FIX #1: SETTINGS — SUB MANAGEMENT with EDIT
+    FIX #1: SETTINGS — SUB MANAGEMENT with EDIT
 ══════════════════════════════════════════════════════ */
 function renderSubList(){
   document.getElementById('sub-count').textContent=subs.length;
@@ -1485,11 +1486,13 @@ function removeSub(i){
 }
 
 /* ══════════════════════════════════════════════════════
-   FIX #4: EXPORT EXCEL respects active filter
+    FIX #4: EXPORT EXCEL respects active filter
 ══════════════════════════════════════════════════════ */
 function exportExcel(){
   const hasFilter=isFilterActive();
-  const dataToExport=hasFilter?getFilteredRecords():[...records];
+  // 💡 ปรับให้ดึงจากดึงตัวแปร filteredRecords ล่าสุดที่โชว์บนตารางตู้ไฟได้เลย
+  const dataToExport=hasFilter?[...filteredRecords]:[...records].reverse();
+  
   if(!dataToExport.length) return toast(hasFilter?'ไม่มีข้อมูลตาม Filter ที่ตั้งไว้':'ยังไม่มีข้อมูล','err');
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.json_to_sheet(dataToExport.map(r=>({
@@ -1530,6 +1533,9 @@ function doImport(e){
       const d=JSON.parse(ev.target.result);
       if(d.subs) subs=d.subs.map(s=>({...s,decimal:s.decimal!==undefined?s.decimal:2}));
       if(d.records) records=d.records;
+      
+      // ✨ [เพิ่มจุดเซฟ] รีเซ็ตหน้ากลับเพจ 1 ป้องกันบั๊กแสดงตารางเอ๋อ
+      currentPage = 1; 
       persist(); renderAll();
       toast(`📂 Import สำเร็จ — ${records.length} records`,'ok');
     }catch(err){ toast('ไฟล์ไม่ถูกต้อง','err'); }
@@ -1540,15 +1546,22 @@ function doImport(e){
 
 function clearCache(){
   if(!confirm('ล้าง Cache ในเครื่องนี้?\n(ข้อมูลใน Google Sheets ยังอยู่ครบ)')) return;
-  records=[]; subs=INIT_SUBS; persist(); renderAll();
+  records=[]; subs=INIT_SUBS; 
+  
+  // ✨ [เพิ่มจุดเซฟ] ล้างสถานะตัวกรองและการแบ่งหน้าทั้งหมดให้เคลียร์สะอาด
+  filteredRecords=[]; 
+  currentPage=1; 
+  
+  persist(); renderAll();
   toast('ล้าง Cache แล้ว — กด Refresh โหลดจาก Sheets','warn');
 }
 
 /* ══════════════════════════════════════════════════════
-   TOAST
+    TOAST
 ══════════════════════════════════════════════════════ */
 function toast(msg,type=''){
   const t=document.getElementById('toast');
+  if(!t) return;
   t.textContent=msg;
   t.className='on'+(type?' '+type:'');
   clearTimeout(t._t);
