@@ -1261,8 +1261,7 @@ function openEdit(recordId) {
   modal.classList.add('open'); 
 }
 
-* 🔒 ฟังก์ชันย่อยสำหรับคำนวณและล็อก Step ทศนิยมในตู้แก้ไข
- */
+/* 🔒 ฟังก์ชันย่อยสำหรับคำนวณและล็อก Step ทศนิยมในตู้แก้ไข */
 function updateEditKwhStep(subId) {
   const sub = subs.find(s => s.id === subId);
   const dec = sub && sub.decimal !== undefined ? sub.decimal : 2;
