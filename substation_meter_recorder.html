@@ -626,62 +626,33 @@ tr:hover td{background:var(--surface-2)}
 const API_URL = 'https://script.google.com/macros/s/AKfycbwtt_VJwan3j46Q6RbiS18Iwc4kkQ3mPbFF9IvqdUlrANIbiivB0Xxq3n02kMP_5nm5xA/exec';
 const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
 const ADMIN_PASS = '1234';
-   // ── ตัวแปรสำหรับระบบตัวกรองและการแบ่งหน้า (ใส่เพิ่มเข้าไป) ──
+
+const API_URL = 'https://script.google.com/macros/s/AKfycbwtt_VJwan3j46Q6RbiS18Iwc4kkQ3mPbFF9IvqdUlrANIbiivB0Xxq3n02kMP_5nm5xA/exec';
+const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
+const ADMIN_PASS = '1234';
+
+// ── ตัวแปรสำหรับระบบตัวกรองและการแบ่งหน้า ──
 let filteredRecords = []; // เก็บข้อมูลที่ผ่านการกรองแล้ว
 let currentPage = 1;      // หน้าปัจจุบัน
 let pageSize = 15;        // จำนวนแถวต่อ 1 หน้า (ปรับเพิ่มลดได้)
-let serverUsers = []; // จะถูกเติมเต็มเมื่อดึงข้อมูลจาก Google Sheets สำเร็จ
-let editSubIndex = null;
-   
-const INIT_SUBS = [
-  {id:'SUB-02',name:'NO.2',zone:'2-5 UA Shop',decimal:2},
-  {id:'SUB-03',name:'NO.3',zone:'2-5 UA Shop',decimal:2},
-  {id:'SUB-04',name:'NO.4',zone:'2-5 UA Shop',decimal:2},
-  {id:'SUB-05',name:'NO.5',zone:'2-5 UA Shop',decimal:2},
-  {id:'SUB-06',name:'NO.6',zone:'6-12 Power Zone',decimal:2},
-  {id:'SUB-07',name:'NO.7',zone:'6-12 Power Zone',decimal:2},
-  {id:'SUB-08',name:'NO.8',zone:'6-12 Power Zone',decimal:2},
-  {id:'SUB-09',name:'NO.9',zone:'6-12 Power Zone',decimal:2},
-  {id:'SUB-10',name:'NO.10',zone:'6-12 Power Zone',decimal:2},
-  {id:'SUB-11',name:'NO.11',zone:'6-12 Power Zone',decimal:2},
-  {id:'SUB-12',name:'NO.12',zone:'6-12 Power Zone',decimal:2},
-  {id:'SUB-15',name:'NO.15',zone:'Body Shop',decimal:2},
-  {id:'SUB-18',name:'NO.18',zone:'Body Shop',decimal:2},
-  {id:'SUB-19',name:'NO.19',zone:'Body Shop',decimal:2},
-  {id:'SUB-20',name:'NO.20',zone:'Body Shop',decimal:2},
-  {id:'SUB-24',name:'NO.24',zone:'Body Shop',decimal:2},
-  {id:'SUB-27',name:'NO.27',zone:'Body Shop',decimal:2},
-  {id:'SUB-28',name:'NO.28',zone:'Body Shop',decimal:2},
-  {id:'SUB-29',name:'NO.29',zone:'Body Shop',decimal:2},
-  {id:'SUB-30',name:'NO.30',zone:'Body Shop',decimal:2},
-  {id:'SUB-21',name:'NO.21',zone:'21-22 La Shop',decimal:2},
-  {id:'SUB-22',name:'NO.22',zone:'21-22 La Shop',decimal:2},
-  {id:'SUB-31',name:'NO.31',zone:'31 Head Office',decimal:2},
-  {id:'SUB-33',name:'NO.33/35',zone:'Frame Shop',decimal:2},
-  {id:'SUB-34',name:'NO.34',zone:'Frame Shop',decimal:2},
-  {id:'SUB-36',name:'NO.36',zone:'Frame Shop',decimal:2},
-  {id:'SUB-37',name:'NO.37',zone:'Frame Shop',decimal:2},
-  {id:'SUB-38',name:'NO.38',zone:'38 Paint Shop',decimal:2},
-];
 
 /* ══════════════════════════════════════════════════════
-   STATE
+   STATE (อัปเดต: Dynamic 100% ไม่พึ่งพาการ Hardcode รายชื่อตู้)
 ══════════════════════════════════════════════════════ */
-let subs         = jLoad('subs') || INIT_SUBS;
+let subs         = jLoad('subs') || []; // ดึงจาก Cache ล่าสุด ถ้าเปิดครั้งแรกจะเป็นค่าว่างเพื่อรอซิงค์จาก Sheets
 let records      = jLoad('records') || [];
-// FIX #4: persistent filter state
 let activeFilter = { sub:'', user:'', from:'', to:'' };
 let appMode      = 'basic';
 let activeSub    = null;
 let editRecordId = null;
-let editSubIndex = null; // FIX #1
+let editSubIndex = null; 
 let isConnected  = false;
 let currentEditingRecordId = null;
 
 // 🔒 ระบบล็อกอิน (ดึงข้อมูลแบบ Dynamic จาก Google Sheets)
 let serverUsers  = [];  // คลังเก็บรายชื่อและรหัสผ่าน
-let currentUser  = '';  // เก็บชื่อพนักงานที่ล็อกอินสำเร็จ 
-/* ══════════════════════════════════════════════════════
+let currentUser  = '';  // เก็บชื่อพนักงานที่ล็อกอินสำเร็จ ในปัจจุบัน
+/* ══════════════════════════════════════════════════════ */
    UTILITIES
 ══════════════════════════════════════════════════════ */
 function jLoad(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null} }
