@@ -623,45 +623,40 @@ tr:hover td{background:var(--surface-2)}
 /* ══════════════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════════════ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxwQMzzRhGmOQSV5R-ye4Ps9lxroIzxbYDRbiL16E8PgWiT1zNY6PhKKKuwsym8tIT1Kw/exec';
+const API_URL     = 'https://script.google.com/macros/s/AKfycbxDdfEpETvEHKYjAR3ebNEIGyAM1kfmDsAvcWTiEAd9da9p6ffosqBfoSuXPY-lQfjoHQ/exec';
 const QR_BASE_URL = 'https://ramesimct.github.io/substation-logger/substation_meter_recorder.html';
-const ADMIN_PASS = '1234';
-
-// ── ตัวแปรสำหรับระบบตัวกรองและการแบ่งหน้า ──
-let filteredRecords = []; // เก็บข้อมูลที่ผ่านการกรองแล้ว
-let currentPage = 1;      // หน้าปัจจุบัน
-let pageSize = 15;        // จำนวนแถวต่อ 1 หน้า (ปรับเพิ่มลดได้)
 
 /* ══════════════════════════════════════════════════════
-   STATE (อัปเดต: Dynamic 100% ไม่พึ่งพาการ Hardcode รายชื่อตู้)
+   STATE
 ══════════════════════════════════════════════════════ */
-let subs         = jLoad('subs') || []; // ดึงจาก Cache ล่าสุด ถ้าเปิดครั้งแรกจะเป็นค่าว่างเพื่อรอซิงค์จาก Sheets
-let records      = jLoad('records') || [];
-let activeFilter = { sub:'', user:'', from:'', to:'' };
-let appMode      = 'basic';
-let activeSub    = null;
-let editRecordId = null;
-let editSubIndex = null; 
-let isConnected  = false;
+let subs                 = jLoad('subs')    || [];
+let records              = jLoad('records') || [];
+let filteredRecords      = [];
+let currentPage          = 1;
+let pageSize             = 15;
+let activeFilter         = { sub:'', user:'', from:'', to:'' };
+let appMode              = 'basic';
+let activeSub            = null;
+let editSubIndex         = null;
+let isConnected          = false;
 let currentEditingRecordId = null;
+let currentUser          = '';
 
-// 🔒 ระบบล็อกอิน (ดึงข้อมูลแบบ Dynamic จาก Google Sheets)
-let serverUsers  = [];  // คลังเก็บรายชื่อและรหัสผ่าน
-let currentUser  = '';  // เก็บชื่อพนักงานที่ล็อกอินสำเร็จ ในปัจจุบัน
-/* ══════════════════════════════════════════════════════ 
+/* ══════════════════════════════════════════════════════
    UTILITIES
 ══════════════════════════════════════════════════════ */
-function jLoad(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null} }
+function jLoad(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+
 function persist(){
-  localStorage.setItem('subs',JSON.stringify(subs));
-  localStorage.setItem('records',JSON.stringify(records));
+  localStorage.setItem('subs',    JSON.stringify(subs));
+  localStorage.setItem('records', JSON.stringify(records));
 }
 
 function fmtDate(d){
   if(!d) return '—';
   let obj;
-  if(String(d).includes('T')) obj=new Date(d);
-  else{ const[y,m,dy]=String(d).split('-'); obj=new Date(y,m-1,dy); }
+  if(String(d).includes('T')) obj = new Date(d);
+  else { const [y,m,dy] = String(d).split('-'); obj = new Date(y, m-1, dy); }
   if(isNaN(obj.getTime())) return String(d);
   return `${String(obj.getDate()).padStart(2,'0')}/${String(obj.getMonth()+1).padStart(2,'0')}/${obj.getFullYear()}`;
 }
@@ -669,310 +664,171 @@ function fmtDate(d){
 function fmtTime(t){
   if(!t) return '—';
   if(String(t).includes('T')){
-    const obj=new Date(t);
-    if(!isNaN(obj.getTime())) return `${String(obj.getHours()).padStart(2,'0')}:${String(obj.getMinutes()).padStart(2,'0')}`;
+    const obj = new Date(t);
+    if(!isNaN(obj.getTime()))
+      return `${String(obj.getHours()).padStart(2,'0')}:${String(obj.getMinutes()).padStart(2,'0')}`;
   }
-  return String(t).slice(0,5)||'—';
+  return String(t).slice(0,5) || '—';
 }
 
-function fmtNum(val,subId){
-  const sub=subs.find(s=>s.id===subId);
-  const dec=sub&&sub.decimal!==undefined?sub.decimal:2;
-  return parseFloat(val||0).toFixed(dec);
-}
-   
-// 🎯 1. ฟังก์ชันคำ Login
-// 🔒 ฟังก์ชันตรวจสอบการล็อกอินฝั่งหน้าบ้าน
-function handleLogin() {
-  // 1. ดึง Element จาก ID ที่ถูกต้องใน HTML
-  const userInput = document.getElementById('login-user');
-  const passInput = document.getElementById('login-pass');
-  const errDiv    = document.getElementById('login-err');
-  const loginGate = document.getElementById('login-gate');
-
-  // ตรวจสอบระบบดักบั๊ก (บรรทัด 694 เดิม)
-  if (!userInput || !passInput) {
-    console.error("❌ ไม่พบ Element ช่องกรอก Username หรือ Password ในหน้า HTML");
-    return;
-  }
-
-  const userVal = userInput.value.trim();
-  const passVal = passInput.value.trim();
-
-  // 2. ซ่อนข้อความแจ้งเตือนข้อผิดพลาดก่อนตรวจรหัส
-  errDiv.style.display = 'none';
-
-  // 3. ตรวจสอบสิทธิ์การเข้าสู่ระบบ
-  // เคสที่ 1: ตรวจสอบกับระบบ Admin Master Pass (1234)
-  if (userVal.toLowerCase() === 'admin' && passVal === ADMIN_PASS) {
-    currentUser = 'Admin';
-    appMode = 'admin'; // เปิดสิทธิ์แอดมินแก้ไขระบบได้
-    loginGate.style.display = 'none'; // ปลดล็อกหน้าจอบัง
-    console.log("🔓 เข้าสู่ระบบสำเร็จในฐานะ: Admin");
-    if (typeof initDashboard === 'function') initDashboard(); // เรียกฟังก์ชันวาดหน้าจอ (ถ้ามี)
-    return;
-  }
-
-  // เคสที่ 2: ตรวจสอบ Dynamic จากข้อมูลพนักงานที่ดึงมาจาก Google Sheets (serverUsers)
-  // สมมติโครงสร้างข้อมูลใน Sheets เป็น [ { username: 'mok', password: '...' }, ... ]
-  const foundUser = serverUsers.find(u => 
-    u.username && u.username.toLowerCase() === userVal.toLowerCase() && String(u.password) === passVal
-  );
-
-  if (foundUser) {
-    currentUser = foundUser.username;
-    appMode = 'basic'; // สิทธิ์พนักงานทั่วไปสำหรับบันทึกค่ามิเตอร์
-    loginGate.style.display = 'none'; // ปลดล็อกหน้าจอบัง
-    console.log("🔓 เข้าสู่ระบบสำเร็จในฐานะพนักงาน:", currentUser);
-    if (typeof initDashboard === 'function') initDashboard();
-  } else {
-    // ❌ ถ้ารหัสไม่ตรงเลย ให้โชว์ตัวหนังสือสีแดง
-    errDiv.style.display = 'block';
-    errDiv.innerText = '❌ ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง';
-  }
-}
-   
-// 🎯 2. ฟังก์ชันปรับขนาดแถวแสดงผลเมื่อคนดูเลือกเปลี่ยนจำนวนแถว
-function onPageSizeChange() {
-  pageSize = parseInt(document.getElementById('pageSize').value);
-  currentPage = 1;
-  renderTable();
+function fmtNum(val, subId){
+  const sub = subs.find(s => s.id === subId);
+  const dec = sub && sub.decimal !== undefined ? sub.decimal : 2;
+  return parseFloat(val || 0).toFixed(dec);
 }
 
-// 🎯 3. ฟังก์ชันสร้างปุ่มเปลี่ยนหน้า (Pagination Controls Changer)
-function renderPaginationControls(totalItems) {
-  const nav = document.getElementById('pageNav'); // ไอดีกล่องที่จะวางปุ่ม
-  if (!nav) return;
-  nav.innerHTML = '';
-
-  const totalPages = Math.ceil(totalItems / pageSize);
-  if (totalPages <= 1) return; // ถ้ามีหน้าเดียว ไม่ต้องโชว์ปุ่มควบคุม
-
-  // ปุ่มย้อนกลับ ◀
-  const prevBtn = document.createElement('button');
-  prevBtn.className = 'page-btn'; prevBtn.textContent = '◀';
-  prevBtn.disabled = currentPage === 1;
-  prevBtn.onclick = () => { currentPage--; renderTable(); };
-  nav.appendChild(prevBtn);
-
-  // วาดตัวเลขหน้า (จำกัดให้โชว์แค่ช่วงใกล้ๆ หน้าปัจจุบัน ลดการล้นจอ)
-  for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-      const pBtn = document.createElement('button');
-      pBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-      pBtn.textContent = i;
-      pBtn.onclick = () => { currentPage = i; renderTable(); };
-      nav.appendChild(pBtn);
-    } else if (i === currentPage - 3 || i === currentPage + 3) {
-      const dot = document.createElement('span');
-      dot.textContent = '...'; dot.style.color = '#4e6a8a';
-      nav.appendChild(dot);
-    }
-  }
-
-  // ปุ่มถัดไป ▶
-  const nextBtn = document.createElement('button');
-  nextBtn.className = 'page-btn'; nextBtn.textContent = '▶';
-  nextBtn.disabled = currentPage === totalPages;
-  nextBtn.onclick = () => { currentPage++; renderTable(); };
-  nav.appendChild(nextBtn);
-}
-   
-function renderTable() {
-  const tbody = document.getElementById('main-body'); 
-  const emptyBox = document.getElementById('main-empty');
-  if (!tbody || !emptyBox) return;
-
-  tbody.innerHTML = ''; 
-
-  const total = filteredRecords.length;
-  
-  // หั่นข้อมูลแสดงผลเฉพาะหน้า (Page Size)
-  const startIdx = (currentPage - 1) * pageSize;
-  const endIdx = Math.min(startIdx + pageSize, total);
-  const pageItems = filteredRecords.slice(startIdx, endIdx); 
-
-  // ปรับการแสดงผลตัวเลขภาพรวมท้ายตาราง
-  if(document.getElementById('totalRows')) document.getElementById('totalRows').textContent = total;
-  if(document.getElementById('rowStart')) document.getElementById('rowStart').textContent = total > 0 ? startIdx + 1 : 0;
-  if(document.getElementById('rowEnd')) document.getElementById('rowEnd').textContent = endIdx;
-
-  // ปรับจำนวนนับเมนูด้านบนตาราง (Data Count & Badge)
-  const count = document.getElementById('data-count');
-  if (count) count.textContent = `(${total} รายการ${isFilterActive() ? ' — filtered' : ''})`;
-  const badge = document.getElementById('filter-badge');
-  if (badge) badge.style.display = isFilterActive() ? 'inline-flex' : 'none';
-
-  // จัดการกรณีไม่มีข้อมูลให้เปิด-ปิดตามเงื่อนไขเดิม
-  if (total === 0) {
-    emptyBox.style.display = 'block';
-    if(document.getElementById('pageNav')) document.getElementById('pageNav').innerHTML = '';
-    return;
-  } else {
-    emptyBox.style.display = 'none';
-  }
-
-  // ── 🌟 ดึงข้อมูลเฉพาะของหน้าปัจจุบัน (pageItems) มาวาดลงตารางตู้ Sub ──
-  tbody.innerHTML = pageItems.map(r => `<tr>
-    <td class="td-sub">${r.subId}</td>
-    <td>${fmtDate(r.date)}</td>
-    <td>${fmtTime(r.time)}</td>
-    <td class="td-kwh">${fmtNum(r.kwh, r.subId)}</td>
-    <td class="td-used"><strong>${fmtNum(r.used || 0, r.subId)}</strong></td>
-    <td class="desktop-only">${r.user || '—'}</td>
-    <td class="desktop-only">${r.note || '—'}</td>
-    <td><div class="td-act">
-      <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteRecord('${r.id}')">🗑</button>
-    </div></td>
-  </tr>`).join('');
-
-  // วาดปุ่มเลขหน้าย่อยด้านล่าง
-  renderPaginationControls(total);
-}
-
-   
-// FIX #3: format for chart label "HH:MM\nDD/MM/YYYY"
 function fmtChartDate(dateStr){
   if(!dateStr) return '—';
   let obj;
-  if(String(dateStr).includes('T')) obj=new Date(dateStr);
-  else{ const[y,m,dy]=String(dateStr).split('-'); obj=new Date(y,m-1,dy); }
+  if(String(dateStr).includes('T')) obj = new Date(dateStr);
+  else { const [y,m,dy] = String(dateStr).split('-'); obj = new Date(y, m-1, dy); }
   if(isNaN(obj.getTime())) return String(dateStr);
-  const dd=String(obj.getDate()).padStart(2,'0');
-  const mm=String(obj.getMonth()+1).padStart(2,'0');
-  return `${dd}/${mm}`;
+  return `${String(obj.getDate()).padStart(2,'0')}/${String(obj.getMonth()+1).padStart(2,'0')}`;
 }
 
 function setNow(){
-  const n=new Date();
-  const ed=document.getElementById('in-date');
-  const et=document.getElementById('in-time');
-  if(ed) ed.value=n.toISOString().split('T')[0];
-  if(et) et.value=n.toTimeString().slice(0,5);
+  const n  = new Date();
+  const ed = document.getElementById('in-date');
+  const et = document.getElementById('in-time');
+  if(ed) ed.value = n.toISOString().split('T')[0];
+  if(et) et.value = n.toTimeString().slice(0,5);
 }
 
+// ✅ sort by date+time (เวลาจริงของมิเตอร์) ไม่ใช่เวลาที่กรอก (ts)
 function getLastKwh(subId){
-  const sorted=records.filter(r=>r.subId===subId).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
-  return sorted.length?parseFloat(sorted[0].kwh)||0:null;
+  const sorted = records
+    .filter(r => r.subId === subId)
+    .sort((a,b) => (`${b.date} ${b.time||'00:00'}`).localeCompare(`${a.date} ${a.time||'00:00'}`));
+  return sorted.length ? parseFloat(sorted[0].kwh) || 0 : null;
 }
 
+// เรียงจากเก่าไปใหม่ตามเวลาจริง
 function getSubRecs(subId){
-  return records.filter(r=>r.subId===subId).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  return records
+    .filter(r => r.subId === subId)
+    .sort((a,b) => (`${a.date} ${a.time||'00:00'}`).localeCompare(`${b.date} ${b.time||'00:00'}`));
+}
+
+/* ══════════════════════════════════════════════════════
+   LOGIN — ตรวจสอบฝั่ง Server ✅ (ไม่เก็บ password ใน browser)
+══════════════════════════════════════════════════════ */
+async function handleLogin(){
+  const userVal = document.getElementById('login-user').value.trim();
+  const passVal = document.getElementById('login-pass').value.trim();
+  const errDiv  = document.getElementById('login-err');
+  errDiv.style.display = 'none';
+  try{
+    const res = await apiPost({ action:'login', username:userVal, password:passVal });
+    if(res && res.success){
+      currentUser = res.name;
+      appMode     = res.role === 'admin' ? 'admin' : 'basic';
+      document.getElementById('login-gate').style.display = 'none';
+      if(typeof initDashboard === 'function') initDashboard();
+    } else {
+      errDiv.style.display = 'block';
+      errDiv.innerText = '❌ ' + (res?.error || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+    }
+  }catch(e){
+    errDiv.style.display = 'block';
+    errDiv.innerText = '❌ เชื่อมต่อ Server ไม่ได้ — ' + e.message;
+  }
 }
 
 /* ══════════════════════════════════════════════════════
    THEME
 ══════════════════════════════════════════════════════ */
 function initTheme(){
-  const saved=localStorage.getItem('theme');
-  const prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
-  setTheme(saved||(prefersDark?'dark':'light'));
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',e=>{
-    if(!localStorage.getItem('theme')) setTheme(e.matches?'dark':'light');
+  const saved      = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  setTheme(saved || (prefersDark ? 'dark' : 'light'));
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if(!localStorage.getItem('theme')) setTheme(e.matches ? 'dark' : 'light');
   });
 }
 function setTheme(t){
-  document.documentElement.setAttribute('data-theme',t);
-  document.getElementById('theme-btn').textContent=t==='dark'?'☀️':'🌙';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-btn').textContent = t === 'dark' ? '☀️' : '🌙';
 }
 function toggleTheme(){
-  const cur=document.documentElement.getAttribute('data-theme');
-  const nxt=cur==='dark'?'light':'dark';
-  localStorage.setItem('theme',nxt);
+  const cur = document.documentElement.getAttribute('data-theme');
+  const nxt = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('theme', nxt);
   setTheme(nxt);
 }
 
 /* ══════════════════════════════════════════════════════
    API
 ══════════════════════════════════════════════════════ */
-function apiGet() {
-  return new Promise((resolve, reject) => {
-    google.script.run
-      .withSuccessHandler(data => resolve(data))
-      .withFailureHandler(err => reject(err))
-      .getGlobalData(); // วิ่งไปเรียกฟังก์ชัน getGlobalData() ใน รหัส.gs
-  });
-}
-   
-async function apiPost(body){
-  const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),12000);
-  try{
-    const res=await fetch(API_URL,{method:'POST',body:JSON.stringify(body),signal:ctrl.signal});
-    clearTimeout(tid);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    return res.json();
-  }catch(e){ clearTimeout(tid); throw e; }
-}
-
-function setSyncStatus(status,msg){
-  const dot=document.getElementById('sync-dot');
-  const ban=document.getElementById('sync-banner');
-  const ico=document.getElementById('sync-icon');
-  const bm=document.getElementById('sync-msg');
-  dot.className='sync-dot '+(status==='ok'?'ok':status==='busy'?'busy':'err');
-  if(status==='busy'){
-    ban.className='sync-banner show loading'; ico.textContent='⏳'; bm.textContent=msg||'กำลัง sync...';
-  } else if(status==='error'){
-    ban.className='sync-banner show error'; ico.textContent='❌'; bm.textContent=msg||'เชื่อมต่อไม่ได้';
-    setTimeout(()=>{ ban.className='sync-banner'; },5000);
-  } else {
-    ban.className='sync-banner show success'; ico.textContent='✅'; bm.textContent=msg||'Sync สำเร็จ';
-    setTimeout(()=>{ ban.className='sync-banner'; },2500);
+// ✅ retry อัตโนมัติ + timeout 12s
+async function apiPost(body, retries = 2){
+  for(let attempt = 0; attempt <= retries; attempt++){
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 12000);
+    try{
+      const res  = await fetch(API_URL, { method:'POST', body:JSON.stringify(body), signal:ctrl.signal });
+      clearTimeout(tid);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if(data.status === 'error') throw new Error(data.message || 'Server error');
+      return data;
+    }catch(e){
+      clearTimeout(tid);
+      if(attempt === retries) throw e;
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
   }
 }
 
-// ── แก้ไขจุดนี้ (ประมาณบรรทัด 682) ──
-function loadFromServer() {
-  console.log("⏳ กำลังดึงข้อมูลพนักงานและรายชื่อตู้จาก Google Sheets...");
-  
-  // ใช้ fetch ยิงไปหากล่อง API_URL แทนการใช้ google.script.run
+function setSyncStatus(status, msg){
+  const dot = document.getElementById('sync-dot');
+  const ban = document.getElementById('sync-banner');
+  const ico = document.getElementById('sync-icon');
+  const bm  = document.getElementById('sync-msg');
+  dot.className = 'sync-dot ' + (status==='ok' ? 'ok' : status==='busy' ? 'busy' : 'err');
+  if(status === 'busy'){
+    ban.className = 'sync-banner show loading'; ico.textContent = '⏳'; bm.textContent = msg || 'กำลัง sync...';
+  } else if(status === 'error'){
+    ban.className = 'sync-banner show error'; ico.textContent = '❌'; bm.textContent = msg || 'เชื่อมต่อไม่ได้';
+    setTimeout(() => { ban.className = 'sync-banner'; }, 5000);
+  } else {
+    ban.className = 'sync-banner show success'; ico.textContent = '✅'; bm.textContent = msg || 'Sync สำเร็จ';
+    setTimeout(() => { ban.className = 'sync-banner'; }, 2500);
+  }
+}
+
+// ✅ ดึง subs + records จาก Server (ไม่รับ users แล้ว)
+function loadFromServer(){
   fetch(API_URL)
-    .then(response => {
-      if (!response.ok) throw new Error('เครือข่ายมีปัญหาหรือไม่ได้รับอนุญาต Access');
-      return response.json();
-    })
+    .then(res => { if(!res.ok) throw new Error('Network error'); return res.json(); })
     .then(data => {
-      if (data) {
-        // 📥 1. เติมข้อมูลพนักงานเข้าคลัง serverUsers
-        if (data.users && Array.isArray(data.users)) {
-          serverUsers = data.users;
-        }
-        
-        // 📥 2. เติมข้อมูลตู้ Substation ล่าสุดเข้าคลัง subs
-        if (data.subs && Array.isArray(data.subs)) {
-          subs = data.subs;
-        }
-        
-        // 💾 3. บันทึกลงความจำเครื่อง (Cache) ทันที
-        persist();
-        isConnected = true;
-        console.log("✅ ซิงค์ข้อมูลกับ Google Sheets สำเร็จเรียบร้อย!", data);
-        
-        // 🔄 4. อัปเดต UI บนหน้าเว็บ (ถ้ามีฟังก์ชันสำหรับวาดตาราง/ดรอปดาวน์ใหม่ ให้ใส่ตรงนี้ครับ)
-        if (typeof renderDropdowns === 'function') renderDropdowns(); 
-        if (typeof buildSubCards === 'function') buildSubCards();
-      }
+      if(!data || data.status === 'error') throw new Error(data?.message || 'Server error');
+      if(data.subs    && Array.isArray(data.subs))    subs    = data.subs;
+      if(data.records && Array.isArray(data.records)) records = data.records; // ✅ sync records
+      persist();
+      isConnected = true;
+      renderAll();
+      console.log(`✅ Sync สำเร็จ — ${subs.length} subs, ${records.length} records`);
     })
-    .catch(error => {
-      console.error("❌ ดึงข้อมูลออนไลน์ไม่สำเร็จ (ระบบจะดึงจาก Cache เก่ามาสแตนด์บายให้ก่อน):", error);
+    .catch(err => {
+      console.warn('⚠️ โหลดจาก Server ไม่ได้ ใช้ Cache แทน:', err.message);
       isConnected = false;
     });
 }
-   
+
 async function testConn(){
   setSyncStatus('busy','กำลังทดสอบ...');
-  const box=document.getElementById('api-status');
-  box.style.display='block';
+  const box = document.getElementById('api-status');
+  box.style.display = 'block';
   try{
-    const data=await apiGet();
-    if(data.error) throw new Error(data.error);
+    const res = await fetch(API_URL);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if(data.status === 'error') throw new Error(data.message);
     setSyncStatus('ok','เชื่อมต่อสำเร็จ');
-    box.innerHTML=`<div class="info-box">✅ เชื่อมต่อสำเร็จ — ${records.length} records</div>`;
+    box.innerHTML = `<div class="info-box">✅ เชื่อมต่อสำเร็จ — ${records.length} records, ${subs.length} subs</div>`;
   }catch(e){
     setSyncStatus('error','ล้มเหลว');
-    box.innerHTML=`<div class="warn-box">❌ ${e.message}</div>`;
+    box.innerHTML = `<div class="warn-box">❌ ${e.message}</div>`;
   }
 }
 
@@ -980,20 +836,19 @@ async function testConn(){
    INIT
 ══════════════════════════════════════════════════════ */
 function init(){
-  // Migrate: add decimal field if missing
-  subs=subs.map(s=>({...s,decimal:s.decimal!==undefined?s.decimal:2}));
+  subs = subs.map(s => ({ ...s, decimal: s.decimal !== undefined ? s.decimal : 2 }));
   initTheme();
   setNow();
   renderAll();
-  document.getElementById('qr-url-preview').textContent=QR_BASE_URL+'?sub=SUB-XX';
-  const p=new URLSearchParams(location.search).get('sub');
+  document.getElementById('qr-url-preview').textContent = QR_BASE_URL + '?sub=SUB-XX';
+  const p = new URLSearchParams(location.search).get('sub');
   if(p){
     goTab('entry');
-    setTimeout(()=>{
-      const found=subs.find(s=>s.id===p.toUpperCase());
-      if(found){ selectSub(found.id); toast('📍 เปิด '+found.id+' จาก QR','ok'); }
-      else toast('ไม่พบ Sub: '+p,'err');
-    },200);
+    setTimeout(() => {
+      const found = subs.find(s => s.id === p.toUpperCase());
+      if(found){ selectSub(found.id); toast('📍 เปิด ' + found.id + ' จาก QR','ok'); }
+      else toast('ไม่พบ Sub: ' + p,'err');
+    }, 200);
   }
   loadFromServer();
 }
@@ -1008,61 +863,156 @@ function renderAll(){
 }
 
 /* ══════════════════════════════════════════════════════
-   FIX #2: ADMIN & TABS
+   ADMIN & TABS
 ══════════════════════════════════════════════════════ */
 function toggleAdmin(){
-  const btn=document.getElementById('btn-admin');
-  const tabsBar=document.getElementById('tabs-bar');
-  if(appMode==='basic'){
-    const pwd=prompt('🔐 รหัสผ่านผู้ดูแลระบบ:');
-    if(pwd===ADMIN_PASS){
-      appMode='admin';
-      btn.textContent='🔓 แอดมิน'; btn.classList.add('on');
-      tabsBar.className='tabs admin-mode';
-      toast('เข้าสู่โหมดแอดมิน','ok');
-    } else if(pwd!==null){ toast('รหัสผ่านไม่ถูกต้อง','err'); }
+  const btn     = document.getElementById('btn-admin');
+  const tabsBar = document.getElementById('tabs-bar');
+  if(appMode === 'basic'){
+    // ✅ ใช้ login จาก server แทน hardcode ADMIN_PASS
+    const pwd = prompt('🔐 รหัสผ่านผู้ดูแลระบบ:');
+    if(pwd === null) return;
+    apiPost({ action:'login', username:'admin', password:pwd })
+      .then(res => {
+        if(res && res.success && res.role === 'admin'){
+          appMode = 'admin';
+          btn.textContent = '🔓 แอดมิน'; btn.classList.add('on');
+          tabsBar.className = 'tabs admin-mode';
+          toast('เข้าสู่โหมดแอดมิน','ok');
+        } else {
+          toast('รหัสผ่านไม่ถูกต้อง','err');
+        }
+      })
+      .catch(() => toast('เชื่อมต่อ Server ไม่ได้','err'));
   } else {
-    appMode='basic';
-    btn.textContent='🔐 ทั่วไป'; btn.classList.remove('on');
-    tabsBar.className='tabs basic-mode';
+    appMode = 'basic';
+    btn.textContent = '🔐 ทั่วไป'; btn.classList.remove('on');
+    tabsBar.className = 'tabs basic-mode';
     toast('กลับโหมดทั่วไป');
     goTab('entry');
   }
 }
 
-const TAB_ORDER=['entry','data','chart','qr','settings'];
+const TAB_ORDER = ['entry','data','chart','qr','settings'];
 function goTab(name){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t   => t.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   document.querySelectorAll('.tab')[TAB_ORDER.indexOf(name)].classList.add('active');
-  if(name==='data'){ renderData(); renderStats(); }
-  if(name==='chart'){ populateDDs(); renderChart(); renderAllChart(); }
-  if(name==='qr'){ renderQR(); }
-  if(name==='settings'){ renderSubList(); }
+  if(name === 'data')     { renderData(); renderStats(); }
+  if(name === 'chart')    { populateDDs(); renderChart(); renderAllChart(); }
+  if(name === 'qr')       { renderQR(); }
+  if(name === 'settings') { renderSubList(); }
+}
+
+/* ══════════════════════════════════════════════════════
+   PAGINATION
+══════════════════════════════════════════════════════ */
+function onPageSizeChange(){
+  pageSize = parseInt(document.getElementById('pageSize').value);
+  currentPage = 1;
+  renderTable();
+}
+
+function renderPaginationControls(totalItems){
+  const nav = document.getElementById('pageNav');
+  if(!nav) return;
+  nav.innerHTML = '';
+  const totalPages = Math.ceil(totalItems / pageSize);
+  if(totalPages <= 1) return;
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'page-btn'; prevBtn.textContent = '◀';
+  prevBtn.disabled = currentPage === 1;
+  prevBtn.onclick = () => { currentPage--; renderTable(); };
+  nav.appendChild(prevBtn);
+
+  for(let i = 1; i <= totalPages; i++){
+    if(i === 1 || i === totalPages || (i >= currentPage-2 && i <= currentPage+2)){
+      const pBtn = document.createElement('button');
+      pBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+      pBtn.textContent = i;
+      pBtn.onclick = () => { currentPage = i; renderTable(); };
+      nav.appendChild(pBtn);
+    } else if(i === currentPage-3 || i === currentPage+3){
+      const dot = document.createElement('span');
+      dot.textContent = '...'; dot.style.color = '#4e6a8a';
+      nav.appendChild(dot);
+    }
+  }
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'page-btn'; nextBtn.textContent = '▶';
+  nextBtn.disabled = currentPage === totalPages;
+  nextBtn.onclick = () => { currentPage++; renderTable(); };
+  nav.appendChild(nextBtn);
+}
+
+function renderTable(){
+  const tbody    = document.getElementById('main-body');
+  const emptyBox = document.getElementById('main-empty');
+  if(!tbody || !emptyBox) return;
+  tbody.innerHTML = '';
+
+  const total    = filteredRecords.length;
+  const startIdx = (currentPage - 1) * pageSize;
+  const endIdx   = Math.min(startIdx + pageSize, total);
+  const pageItems = filteredRecords.slice(startIdx, endIdx);
+
+  if(document.getElementById('totalRows')) document.getElementById('totalRows').textContent = total;
+  if(document.getElementById('rowStart'))  document.getElementById('rowStart').textContent  = total > 0 ? startIdx+1 : 0;
+  if(document.getElementById('rowEnd'))    document.getElementById('rowEnd').textContent    = endIdx;
+
+  const count = document.getElementById('data-count');
+  if(count) count.textContent = `(${total} รายการ${isFilterActive() ? ' — filtered' : ''})`;
+  const badge = document.getElementById('filter-badge');
+  if(badge) badge.style.display = isFilterActive() ? 'inline-flex' : 'none';
+
+  if(total === 0){
+    emptyBox.style.display = 'block';
+    if(document.getElementById('pageNav')) document.getElementById('pageNav').innerHTML = '';
+    return;
+  }
+  emptyBox.style.display = 'none';
+
+  tbody.innerHTML = pageItems.map(r => `<tr>
+    <td class="td-sub">${r.subId}</td>
+    <td>${fmtDate(r.date)}</td>
+    <td>${fmtTime(r.time)}</td>
+    <td class="td-kwh">${fmtNum(r.kwh, r.subId)}</td>
+    <td class="td-used"><strong>${fmtNum(r.used||0, r.subId)}</strong></td>
+    <td class="desktop-only">${r.user||'—'}</td>
+    <td class="desktop-only">${r.note||'—'}</td>
+    <td><div class="td-act">
+      <button class="btn btn-primary btn-sm" onclick="openEdit('${r.id}')">✏️</button>
+      <button class="btn btn-danger btn-sm"  onclick="deleteRecord('${r.id}')">🗑</button>
+    </div></td>
+  </tr>`).join('');
+
+  renderPaginationControls(total);
 }
 
 /* ══════════════════════════════════════════════════════
    ZONES & SUB SELECTION
 ══════════════════════════════════════════════════════ */
 function renderZoneAreas(){
-  const container=document.getElementById('zone-areas');
-  container.innerHTML='';
-  const groups={};
-  subs.forEach(s=>{ if(!groups[s.zone]) groups[s.zone]=[]; groups[s.zone].push(s); });
+  const container = document.getElementById('zone-areas');
+  container.innerHTML = '';
+  const groups = {};
+  subs.forEach(s => { if(!groups[s.zone]) groups[s.zone]=[]; groups[s.zone].push(s); });
   for(const zone in groups){
-    const block=document.createElement('div');
-    block.className='zone-block';
-    block.innerHTML=`<div class="zone-title">🏢 ${zone}</div>`;
-    const grid=document.createElement('div');
-    grid.className='sub-grid';
-    groups[zone].forEach(s=>{
-      const hasData=records.some(r=>r.subId===s.id);
-      const isSel=activeSub&&activeSub.id===s.id;
-      const d=document.createElement('div');
-      d.className='sub-card'+(isSel?' sel':'')+(hasData?' has-data':'');
-      d.innerHTML=`<div class="sc-dot"></div><div class="sc-id">${s.id}</div><div class="sc-name">${s.name}</div>`;
-      d.onclick=()=>selectSub(s.id);
+    const block = document.createElement('div');
+    block.className = 'zone-block';
+    block.innerHTML = `<div class="zone-title">🏢 ${zone}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'sub-grid';
+    groups[zone].forEach(s => {
+      const hasData = records.some(r => r.subId === s.id);
+      const isSel   = activeSub && activeSub.id === s.id;
+      const d = document.createElement('div');
+      d.className = 'sub-card' + (isSel?' sel':'') + (hasData?' has-data':'');
+      d.innerHTML = `<div class="sc-dot"></div><div class="sc-id">${s.id}</div><div class="sc-name">${s.name}</div>`;
+      d.onclick = () => selectSub(s.id);
       grid.appendChild(d);
     });
     block.appendChild(grid);
@@ -1071,88 +1021,91 @@ function renderZoneAreas(){
 }
 
 function selectSub(subId){
-  activeSub=subs.find(s=>s.id===subId);
+  activeSub = subs.find(s => s.id === subId);
   if(!activeSub) return;
-  document.getElementById('sub-list-screen').style.display='none';
-  document.getElementById('entry-section').style.display='block';
-  document.getElementById('banner-id').textContent=activeSub.id;
-  document.getElementById('banner-name').textContent=`${activeSub.name} · ${activeSub.zone}`;
-  
-  // ── 🔒 [จุดล็อกทศนิยม] ตั้งค่า step ของช่องกรอกข้อมูลตามเงื่อนไขตู้ ──
+  document.getElementById('sub-list-screen').style.display = 'none';
+  document.getElementById('entry-section').style.display  = 'block';
+  document.getElementById('banner-id').textContent   = activeSub.id;
+  document.getElementById('banner-name').textContent = `${activeSub.name} · ${activeSub.zone}`;
+
   const inKwh = document.getElementById('in-kwh');
-  const dec = activeSub.decimal !== undefined ? activeSub.decimal : 2;
-  inKwh.value='';
-  if (dec === 0) {
+  const dec   = activeSub.decimal !== undefined ? activeSub.decimal : 2;
+  inKwh.value = '';
+  if(dec === 0){
     inKwh.setAttribute('step', '1');
     inKwh.setAttribute('placeholder', 'กรอกเลขจำนวนเต็มเท่านั้น');
   } else {
     inKwh.setAttribute('step', (1 / Math.pow(10, dec)).toString());
     inKwh.setAttribute('placeholder', `กรอกทศนิยม ${dec} ตำแหน่ง`);
   }
-  // ──────────────────────────────────────────────────────────────
 
-  document.getElementById('in-note').value='';
-  document.getElementById('preview-box').style.display='none';
+  // ✅ auto-fill ชื่อผู้บันทึกจาก currentUser
+  const inUser = document.getElementById('in-user');
+  if(inUser && currentUser && !inUser.value) inUser.value = currentUser;
+
+  document.getElementById('in-note').value = '';
+  document.getElementById('preview-box').style.display = 'none';
   setNow();
-  const sb=document.getElementById('save-btn');
-  sb.innerHTML=isConnected?'✅ บันทึกข้อมูล':'⚠️ บันทึก (Offline)';
-  sb.disabled=false;
+
+  const sb = document.getElementById('save-btn');
+  sb.innerHTML  = isConnected ? '✅ บันทึกข้อมูล' : '⚠️ บันทึก (Offline)';
+  sb.disabled   = false;
   updateMeterSummary();
   renderRecent();
   renderZoneAreas();
 }
 
 function backToList(){
-  activeSub=null;
-  document.getElementById('sub-list-screen').style.display='block';
-  document.getElementById('entry-section').style.display='none';
+  activeSub = null;
+  document.getElementById('sub-list-screen').style.display = 'block';
+  document.getElementById('entry-section').style.display   = 'none';
   renderZoneAreas();
 }
 
 function updateMeterSummary(){
   if(!activeSub) return;
-  const recs=getSubRecs(activeSub.id);
-  const sm=document.getElementById('meter-summary');
-  if(!recs.length){ sm.style.display='none'; return; }
-  sm.style.display='block';
-  const last=recs[recs.length-1];
-  const prev=recs.length>1?recs[recs.length-2]:null;
-  document.getElementById('last-reading').textContent=fmtNum(last.kwh,activeSub.id);
-  document.getElementById('prev-reading').textContent=prev?fmtNum(prev.kwh,activeSub.id):'—';
-  document.getElementById('last-used').textContent=fmtNum(last.used||0,activeSub.id);
+  const recs = getSubRecs(activeSub.id);
+  const sm   = document.getElementById('meter-summary');
+  if(!recs.length){ sm.style.display = 'none'; return; }
+  sm.style.display = 'block';
+  const last = recs[recs.length - 1];
+  const prev = recs.length > 1 ? recs[recs.length - 2] : null;
+  document.getElementById('last-reading').textContent = fmtNum(last.kwh, activeSub.id);
+  document.getElementById('prev-reading').textContent = prev ? fmtNum(prev.kwh, activeSub.id) : '—';
+  document.getElementById('last-used').textContent    = fmtNum(last.used||0, activeSub.id);
 }
 
 function previewUsed(){
   if(!activeSub) return;
-  const val=parseFloat(document.getElementById('in-kwh').value);
-  const box=document.getElementById('preview-box');
-  const chip=document.getElementById('preview-chip');
-  if(isNaN(val)||val<0){ box.style.display='none'; return; }
-  const lastKwh=getLastKwh(activeSub.id);
-  box.style.display='block';
-  if(lastKwh===null){
-    chip.className='chip chip-green'; chip.textContent='📌 บันทึกครั้งแรกของ Sub นี้';
+  const val  = parseFloat(document.getElementById('in-kwh').value);
+  const box  = document.getElementById('preview-box');
+  const chip = document.getElementById('preview-chip');
+  if(isNaN(val) || val < 0){ box.style.display = 'none'; return; }
+  const lastKwh = getLastKwh(activeSub.id);
+  box.style.display = 'block';
+  if(lastKwh === null){
+    chip.className = 'chip chip-green'; chip.textContent = '📌 บันทึกครั้งแรกของ Sub นี้';
   } else {
-    const diff=val-lastKwh;
-    chip.className=diff>=0?'chip chip-green':'chip chip-orange';
-    chip.textContent=diff>=0
-      ?`⚡ ใช้ไปรอบนี้: +${fmtNum(diff,activeSub.id)} kWh`
-      :`⚠️ ค่าน้อยกว่าครั้งก่อน (${fmtNum(lastKwh,activeSub.id)})`;
+    const diff = val - lastKwh;
+    chip.className = diff >= 0 ? 'chip chip-green' : 'chip chip-orange';
+    chip.textContent = diff >= 0
+      ? `⚡ ใช้ไปรอบนี้: +${fmtNum(diff, activeSub.id)} kWh`
+      : `⚠️ ค่าน้อยกว่าครั้งก่อน (${fmtNum(lastKwh, activeSub.id)})`;
   }
 }
 
 function renderRecent(){
   if(!activeSub) return;
-  const recs=getSubRecs(activeSub.id).slice(-5).reverse();
-  const card=document.getElementById('recent-card');
-  const body=document.getElementById('recent-body');
-  if(!recs.length){ card.style.display='none'; return; }
-  card.style.display='block';
-  body.innerHTML=recs.map(r=>`<tr>
+  const recs = getSubRecs(activeSub.id).slice(-5).reverse();
+  const card = document.getElementById('recent-card');
+  const body = document.getElementById('recent-body');
+  if(!recs.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  body.innerHTML = recs.map(r => `<tr>
     <td>${fmtDate(r.date)}</td>
     <td>${fmtTime(r.time)}</td>
-    <td class="td-kwh">${fmtNum(r.kwh,activeSub.id)}</td>
-    <td class="td-used">${fmtNum(r.used||0,activeSub.id)}</td>
+    <td class="td-kwh">${fmtNum(r.kwh, activeSub.id)}</td>
+    <td class="td-used">${fmtNum(r.used||0, activeSub.id)}</td>
     <td>${r.user||'—'}</td>
     <td><button class="btn btn-ghost btn-sm" onclick="openEdit('${r.id}')">✏️</button></td>
   </tr>`).join('');
@@ -1163,132 +1116,133 @@ function renderRecent(){
 ══════════════════════════════════════════════════════ */
 async function saveRecord(){
   if(!activeSub) return toast('เลือก Substation ก่อน','err');
-  const kwh=parseFloat(document.getElementById('in-kwh').value);
-  if(isNaN(kwh)||kwh<0) return toast('กรอกค่ามิเตอร์ด้วย','err');
-  const user=document.getElementById('in-user').value.trim();
+  const kwh  = parseFloat(document.getElementById('in-kwh').value);
+  if(isNaN(kwh) || kwh < 0) return toast('กรอกค่ามิเตอร์ด้วย','err');
+  const user = document.getElementById('in-user').value.trim();
   if(!user) return toast('กรอกชื่อผู้บันทึกด้วย','err');
-  const date=document.getElementById('in-date').value;
+  const date = document.getElementById('in-date').value;
   if(!date) return toast('เลือกวันที่ด้วย','err');
-  const lastKwh=getLastKwh(activeSub.id);
-  if(lastKwh!==null&&kwh<lastKwh){
+
+  const multiplier = activeSub.multiplier !== undefined ? parseFloat(activeSub.multiplier) : 1;
+
+  // ✅ sort by date+time จริง ไม่ใช่ ts
+  const lastRec = records
+    .filter(r => r.subId === activeSub.id)
+    .sort((a,b) => (`${b.date} ${b.time||'00:00'}`).localeCompare(`${a.date} ${a.time||'00:00'}`))
+    [0] || null;
+  const lastKwh = lastRec ? parseFloat(lastRec.kwh) || 0 : null;
+
+  if(lastKwh !== null && kwh < lastKwh){
     if(!confirm(`ค่าที่กรอก (${kwh}) น้อยกว่าครั้งก่อน (${lastKwh})\nบันทึกต่อหรือไม่?`)) return;
   }
-  const now=new Date();
-  const multiplier = activeSub.multiplier !== undefined ? parseFloat(activeSub.multiplier) : 1;
-  const used = lastKwh !== null ? (kwh - lastKwh) * multiplier : 0;
-  const rec={
-    id:`REC-${now.getTime()}-${Math.floor(Math.random()*1000)}`,
-    subId:activeSub.id,subName:activeSub.name,zone:activeSub.zone,
-    date,time:document.getElementById('in-time').value,
-    kwh,used,user,note:document.getElementById('in-note').value||'',
-    ts:now.toISOString(),editedTs:''
+
+  const now = new Date();
+  const rec = {
+    id: `REC-${now.getTime()}-${Math.floor(Math.random()*1000)}`,
+    subId: activeSub.id, subName: activeSub.name, zone: activeSub.zone,
+    date, time: document.getElementById('in-time').value,
+    kwh, used: 0, // ✅ used อยู่ที่ record ก่อนหน้า ไม่ใช่ record ใหม่
+    user, note: document.getElementById('in-note').value || '',
+    ts: now.toISOString(), editedTs: ''
   };
+
+  // ✅ อัปเดต used ของ record ก่อนหน้า
+  let updatedPrev = null;
+  if(lastRec && lastKwh !== null){
+    const diff   = Math.max(0, kwh - lastKwh);
+    const prevIdx = records.findIndex(r => r.id === lastRec.id);
+    if(prevIdx >= 0){
+      records[prevIdx].used = diff * multiplier;
+      updatedPrev = { ...records[prevIdx] };
+    }
+  }
+
   records.push(rec);
   persist();
-  toast(`✅ บันทึกแล้ว — ใช้ไป ${fmtNum(used,activeSub.id)} kWh`,'ok');
-  document.getElementById('in-kwh').value='';
-  document.getElementById('in-note').value='';
-  document.getElementById('preview-box').style.display='none';
+  toast(`✅ บันทึกแล้ว — ${updatedPrev ? `ใช้ไป ${fmtNum(updatedPrev.used, activeSub.id)} kWh` : 'บันทึกครั้งแรก'}`,'ok');
+
+  document.getElementById('in-kwh').value  = '';
+  document.getElementById('in-note').value = '';
+  document.getElementById('preview-box').style.display = 'none';
   setNow();
   updateMeterSummary(); renderRecent(); renderZoneAreas(); updateBadge();
-  const btn=document.getElementById('save-btn');
-  btn.disabled=true; btn.textContent='⏳ กำลัง sync...';
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = '⏳ กำลัง sync...';
   setSyncStatus('busy','กำลังบันทึกลง Google Sheets...');
   try{
-    const res=await apiPost({action:'saveRecord',record:rec});
-    setSyncStatus(res&&(res.success||res.result==='success')?'ok':'ok','บันทึกลง Sheets แล้ว');
+    await apiPost({ action:'saveRecord', record:rec });
+    if(updatedPrev) await apiPost({ action:'editRecord', record:updatedPrev });
+    setSyncStatus('ok','บันทึกลง Sheets แล้ว');
   }catch(e){
     setSyncStatus('error','บันทึกในเครื่องแล้ว — Sync ล้มเหลว');
     toast('⚠️ บันทึกในเครื่องแล้ว แต่ Sync ยังไม่สำเร็จ','warn');
   }finally{
-    btn.disabled=false; btn.innerHTML='✅ บันทึกข้อมูล';
+    btn.disabled = false; btn.innerHTML = '✅ บันทึกข้อมูล';
   }
 }
 
-// ฟังก์ชันคำนวณค่า Used บนเบราว์เซอร์ เรียงตามเวลาจริงของแต่ละตู้
-function computeAllUsedValues(rawRecords) {
-  // 1. แยกกลุ่มข้อมูลตาม Substation ID ก่อน เพราะเราต้องลบกันเฉพาะในตู้ตัวเอง
+/* ══════════════════════════════════════════════════════
+   COMPUTE USED (bulk recalculate)
+══════════════════════════════════════════════════════ */
+function computeAllUsedValues(rawRecords){
   const groups = {};
-  rawRecords.forEach(r => {
-    if (!groups[r.subId]) groups[r.subId] = [];
-    groups[r.subId].push(r);
-  });
+  rawRecords.forEach(r => { if(!groups[r.subId]) groups[r.subId]=[]; groups[r.subId].push(r); });
 
-  // 2. วิ่งคำนวณ Delta (ผลต่าง) ในแต่ละตู้
   Object.keys(groups).forEach(subId => {
-    // เรียงลำดับจากอดีตไปปัจจุบัน (เก่าสุดขึ้นก่อน) เพื่อให้ลบตามลำดับเวลาได้ถูกต้อง
-    groups[subId].sort((a, b) => {
-      const timeA = `${a.date} ${a.time || '00:00'}`;
-      const timeB = `${b.date} ${b.time || '00:00'}`;
-      return timeA.localeCompare(timeB);
-    });
+    groups[subId].sort((a,b) =>
+      (`${a.date} ${a.time||'00:00'}`).localeCompare(`${b.date} ${b.time||'00:00'}`)
+    );
+    const sub        = subs.find(s => s.id === subId);
+    const multiplier = sub?.multiplier !== undefined ? parseFloat(sub.multiplier) : 1;
 
-    const sub = subs.find(s => s.id === subId);
-    const multiplier = sub && sub.multiplier !== undefined ? parseFloat(sub.multiplier) : 1;
-
-    // ลูปคิดค่าย้อนหลัง
-    for (let i = 0; i < groups[subId].length; i++) {
-      if (i === 0) {
-        groups[subId][i].used = 0; // แถวแรกสุดในระบบของตู้นั้นจะยังไม่มีตัวลบ
+    groups[subId].forEach((rec, i) => {
+      if(i === 0){
+        rec.used = 0;
       } else {
-        const prevKwh = parseFloat(groups[subId][i - 1].kwh) || 0;
-        const currKwh = parseFloat(groups[subId][i].kwh) || 0;
-        
-        // คำนวณผลต่าง x ตัวคูณของตู้นั้นๆ
-        let diff = currKwh - prevKwh;
-        
-        // 💡 เซฟการ์ด: เผื่อกรณีเปลี่ยนมิเตอร์ใหม่แล้วเลขรีเซ็ตเริ่มต้นจาก 0
-        if (diff < 0) diff = 0; 
-
-        groups[subId][i].used = diff * multiplier;
+        const diff = parseFloat(groups[subId][i].kwh) - parseFloat(groups[subId][i-1].kwh);
+        // ✅ used เก็บที่ record ก่อนหน้า ตาม logic ใหม่
+        groups[subId][i-1].used = Math.max(0, diff) * multiplier;
+        if(i === groups[subId].length - 1) rec.used = 0; // record ล่าสุดยังไม่มี used
       }
-    }
+    });
   });
 
-  // 3. รวมร่างกลับมาเป็น Array ก้อนเดียวเหมือนเดิม
   return Object.values(groups).flat();
-}   
+}
+
 /* ══════════════════════════════════════════════════════
    EDIT / DELETE RECORD
 ══════════════════════════════════════════════════════ */
-function openEdit(recordId) {
+function openEdit(recordId){
   const r = records.find(x => x.id === recordId);
-  if (!r) return toast('❌ ไม่พบข้อมูลรายการนี้', 'err');
-  
+  if(!r) return toast('❌ ไม่พบข้อมูลรายการนี้','err');
   currentEditingRecordId = recordId;
 
-  // โหลดรายชื่อ Substation ลงตู้ Dropdown ใน Modal แก้ไข
   const editSubSelect = document.getElementById('edit-sub');
-  editSubSelect.innerHTML = subs.map(s => 
+  editSubSelect.innerHTML = subs.map(s =>
     `<option value="${s.id}" ${s.id === r.subId ? 'selected' : ''}>${s.id} — ${s.name}</option>`
   ).join('');
 
-  // นำค่าเดิมไปเติมลงในฟิลด์ต่างๆ
-  document.getElementById('edit-kwh').value = r.kwh;
+  document.getElementById('edit-kwh').value  = r.kwh;
   document.getElementById('edit-date').value = r.date;
   document.getElementById('edit-time').value = r.time || '';
   document.getElementById('edit-user').value = r.user || '';
   document.getElementById('edit-note').value = r.note || '';
 
-  // 🔒 ล็อกทศนิยมช่องกรอกตามข้อกำหนดตู้
   updateEditKwhStep(r.subId);
+  editSubSelect.onchange = e => updateEditKwhStep(e.target.value);
 
-  // ดักจับเผื่อช่างหน้างานกดเปลี่ยนตู้ Substation ในหน้าแก้ไข ให้ปรับล็อกทศนิยมตามตู้ใหม่ทันที
-  editSubSelect.onchange = (e) => updateEditKwhStep(e.target.value);
-
-  // เปิดหน้าต่าง Modal (เปลี่ยน style หรือคลาสตาม CSS ที่ดีไซน์ไว้)
   const modal = document.getElementById('edit-modal');
-  modal.style.display = 'flex'; 
-  modal.classList.add('open'); 
+  modal.style.display = 'flex';
+  modal.classList.add('open');
 }
 
-/* 🔒 ฟังก์ชันย่อยสำหรับคำนวณและล็อก Step ทศนิยมในตู้แก้ไข */
-function updateEditKwhStep(subId) {
-  const sub = subs.find(s => s.id === subId);
-  const dec = sub && sub.decimal !== undefined ? sub.decimal : 2;
+function updateEditKwhStep(subId){
+  const sub     = subs.find(s => s.id === subId);
+  const dec     = sub?.decimal !== undefined ? sub.decimal : 2;
   const inputKwh = document.getElementById('edit-kwh');
-  
-  if (dec === 0) {
+  if(dec === 0){
     inputKwh.setAttribute('step', '1');
     inputKwh.setAttribute('placeholder', 'กรอกเลขจำนวนเต็มเท่านั้น');
   } else {
@@ -1296,189 +1250,170 @@ function updateEditKwhStep(subId) {
     inputKwh.setAttribute('placeholder', `กรอกทศนิยม ${dec} ตำแหน่ง`);
   }
 }
-   
-function closeEdit() {
+
+function closeEdit(){
   currentEditingRecordId = null;
   const modal = document.getElementById('edit-modal');
   modal.style.display = 'none';
   modal.classList.remove('open');
 }
+function closeEditIf(event){ if(event.target.id === 'edit-modal') closeEdit(); }
 
-function closeEditIf(event) {
-  if (event.target.id === 'edit-modal') {
-    closeEdit();
-  }
-}
-
-async function saveEditSub(){
-  if(editSubIndex === null) return;
-  
-  const name = document.getElementById('esub-name').value.trim();
-  const zone = document.getElementById('esub-zone').value.trim();
-  const decimal = parseInt(document.getElementById('esub-decimal').value) || 0;
-  const multiplier = parseFloat(document.getElementById('esub-multiplier').value) || 1;
-  
-  if(!name || !zone) return toast('⚠️ กรุณากรอกชื่อตู้และ Zone ให้ครบ', 'err');
-  if(multiplier <= 0) return toast('⚠️ ตัวคูณต้องมากกว่า 0', 'err');
-  
-  // ✅ เก็บ object และ id ก่อน close (ป้องกัน index หาย)
-  const updatedSub = {
-    ...subs[editSubIndex],
-    name, zone, decimal, multiplier
-  };
-  
-  subs[editSubIndex] = updatedSub;
-  persist();
-  closeEditSub(); // ← ปิดได้แล้ว เพราะไม่ต้องใช้ editSubIndex อีก
-  
-  if (typeof records !== 'undefined') {
-    records = computeAllUsedValues(records);
-    persist();
-  }
-  renderSubList(); renderZoneAreas(); populateDDs();
-  if (typeof renderAll === 'function') renderAll();
-  toast(`✅ อัปเดตตู้ ${updatedSub.id} เรียบร้อย`, 'ok');
-  
-  setSyncStatus('busy', 'กำลังซิงค์ลง Google Sheets...');
-  try {
-    // ✅ ใช้ updatedSub แทน subs[editSubIndex]
-    const res = await apiPost({ action: 'updateSubConfig', sub: updatedSub });
-    if (res && res.success) {
-      setSyncStatus('ok', 'บันทึกข้อมูลตู้ลงแผ่นชีทสำเร็จ');
-    } else {
-      throw new Error(res?.error || 'Sheets rejected');
-    }
-  } catch(e) {
-    setSyncStatus('error', 'บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชแล้ว)');
-  }
-}
-   
 async function deleteRecord(id){
   if(!confirm('ลบรายการนี้?')) return;
-  const subId=records.find(r=>r.id===id)?.subId;
-  records=records.filter(r=>r.id!==id);
-  if(subId){
-    const chain=getSubRecs(subId);
-    chain.forEach((rec,i)=>{
-      const idx=records.findIndex(x=>x.id===rec.id);
-      if(idx>=0) records[idx].used=i===0?0:rec.kwh-chain[i-1].kwh;
-    });
+  const target = records.find(r => r.id === id);
+  if(!target) return;
+  const subId = target.subId;
+
+  records = records.filter(r => r.id !== id);
+
+  // ✅ recalculate used ของ record ก่อนหน้า record ที่ลบ
+  const chain      = getSubRecs(subId);
+  const multiplier = subs.find(s => s.id === subId)?.multiplier || 1;
+  let updatedPrev  = null;
+
+  for(let i = 0; i < chain.length; i++){
+    const prevIdx = records.findIndex(r => r.id === chain[i].id);
+    if(prevIdx < 0) continue;
+    if(i === chain.length - 1){
+      // record ล่าสุด used = 0
+      if(records[prevIdx].used !== 0){
+        records[prevIdx].used = 0;
+        updatedPrev = { ...records[prevIdx] };
+      }
+    } else {
+      const newUsed = Math.max(0, parseFloat(chain[i+1].kwh) - parseFloat(chain[i].kwh)) * multiplier;
+      if(records[prevIdx].used !== newUsed){
+        records[prevIdx].used = newUsed;
+        updatedPrev = { ...records[prevIdx] };
+      }
+    }
   }
-  persist(); toast('ลบแล้ว'); renderAll();
+
+  persist();
+  toast('ลบแล้ว');
+  renderAll();
+
   setSyncStatus('busy','กำลังลบจาก Sheets...');
-  try{ await apiPost({action:'deleteRecord',id:String(id)}); setSyncStatus('ok','ลบสำเร็จ'); }
-  catch(e){ setSyncStatus('error','Offline'); }
+  try{
+    await apiPost({ action:'deleteRecord', id:String(id) });
+    if(updatedPrev) await apiPost({ action:'editRecord', record:updatedPrev });
+    setSyncStatus('ok','ลบสำเร็จ');
+  }catch(e){
+    setSyncStatus('error','Offline — จะ sync เมื่อเชื่อมต่อได้');
+  }
 }
 
 /* ══════════════════════════════════════════════════════
-   FIX #1: EDIT SUBSTATION
+   EDIT SUBSTATION
 ══════════════════════════════════════════════════════ */
 function openEditSub(i){
   editSubIndex = i;
   const s = subs[i];
-  
-  // นำข้อมูลเดิมไปหยอดใส่ฟิลด์ต่างๆ
-  document.getElementById('esub-id').value = s.id;
-  document.getElementById('esub-name').value = s.name;
-  document.getElementById('esub-zone').value = s.zone;
-  document.getElementById('esub-decimal').value = String(s.decimal !== undefined ? s.decimal : 2);
-  
-  // ดึงค่าตัวคูณ (ถ้ายังไม่มีในระบบ ให้ Default เป็น 1)
+  document.getElementById('esub-id').value         = s.id;
+  document.getElementById('esub-name').value       = s.name;
+  document.getElementById('esub-zone').value       = s.zone;
+  document.getElementById('esub-decimal').value    = String(s.decimal    !== undefined ? s.decimal    : 2);
   document.getElementById('esub-multiplier').value = String(s.multiplier !== undefined ? s.multiplier : 1);
-  
-  // สั่งเปิดแสดงผล Modal
   const modal = document.getElementById('edit-sub-modal');
   modal.style.display = 'flex';
   modal.classList.add('open');
 }
-   
+
 function closeEditSub(){
   editSubIndex = null;
   const modal = document.getElementById('edit-sub-modal');
   modal.style.display = 'none';
   modal.classList.remove('open');
 }
-   
-function closeEditSubIf(event){
-  if(event.target.id === 'edit-sub-modal'){
-    closeEditSub();
+function closeEditSubIf(event){ if(event.target.id === 'edit-sub-modal') closeEditSub(); }
+
+async function saveEditSub(){
+  if(editSubIndex === null) return;
+  const name       = document.getElementById('esub-name').value.trim();
+  const zone       = document.getElementById('esub-zone').value.trim();
+  const decimal    = parseInt(document.getElementById('esub-decimal').value)    || 0;
+  const multiplier = parseFloat(document.getElementById('esub-multiplier').value) || 1;
+
+  if(!name || !zone) return toast('⚠️ กรุณากรอกชื่อตู้และ Zone ให้ครบ','err');
+  if(multiplier <= 0) return toast('⚠️ ตัวคูณต้องมากกว่า 0','err');
+
+  // ✅ เก็บ object ก่อน close เพื่อกัน editSubIndex เป็น null
+  const updatedSub = { ...subs[editSubIndex], name, zone, decimal, multiplier };
+  subs[editSubIndex] = updatedSub;
+  persist();
+  closeEditSub();
+
+  records = computeAllUsedValues(records);
+  persist();
+  renderSubList(); renderZoneAreas(); populateDDs();
+  if(typeof renderAll === 'function') renderAll();
+  toast(`✅ อัปเดตตู้ ${updatedSub.id} เรียบร้อย`,'ok');
+
+  setSyncStatus('busy','กำลังซิงค์ลง Google Sheets...');
+  try{
+    const res = await apiPost({ action:'updateSubConfig', sub:updatedSub });
+    if(res && res.success) setSyncStatus('ok','บันทึกข้อมูลตู้ลงแผ่นชีทสำเร็จ');
+    else throw new Error(res?.error || 'Sheets rejected');
+  }catch(e){
+    setSyncStatus('error','บันทึกลงชีทไม่สำเร็จ (แต่เซฟเก็บในแคชแล้ว)');
   }
 }
 
 /* ══════════════════════════════════════════════════════
-   FIX #4: FILTER STATE & DATA TABLE
+   FILTER & DATA TABLE
 ══════════════════════════════════════════════════════ */
-function getFilteredRecords(){
-  return records.filter(r=>{
-    if(activeFilter.sub&&r.subId!==activeFilter.sub) return false;
-    if(activeFilter.user&&!(r.user||'').toLowerCase().includes(activeFilter.user)) return false;
-    if(activeFilter.from&&r.date<activeFilter.from) return false;
-    if(activeFilter.to&&r.date>activeFilter.to) return false;
-    return true;
-  });
-}
-
 function isFilterActive(){
-  return !!(activeFilter.sub||activeFilter.user||activeFilter.from||activeFilter.to);
+  return !!(activeFilter.sub || activeFilter.user || activeFilter.from || activeFilter.to);
 }
 
-function renderData() {
-  applyFilter();
-}
-// 🎯 ฟังก์ชันคำนวณตัวกรอง (ปรับให้ใช้กับตัวแปร records หลักของคุณม็อก)
-function applyFilter() {
-  const subVal = document.getElementById('fl-sub').value;
-  const userVal = document.getElementById('fl-user') ? document.getElementById('fl-user').value.trim().toLowerCase() : '';
+function renderData(){ applyFilter(); }
+
+function applyFilter(){
+  const subVal   = document.getElementById('fl-sub').value;
+  const userVal  = document.getElementById('fl-user')?.value.trim().toLowerCase() || '';
   const startVal = document.getElementById('fl-from').value;
-  const endVal = document.getElementById('fl-to').value;
+  const endVal   = document.getElementById('fl-to').value;
 
-  // ซิงค์ค่าเก็บเข้าตัวแปรระบบเดิมเพื่อให้ปุ่ม Badge และการนับจำนวนทำงานถูกจุด
-  activeFilter.sub = subVal;
-  activeFilter.user = userVal;
-  activeFilter.from = startVal;
-  activeFilter.to = endVal;
+  activeFilter = { sub:subVal, user:userVal, from:startVal, to:endVal };
 
-  // คัดลอกข้อมูลจาก records หลักมากลับด้านเอาล่าสุดขึ้นก่อน
-  let sourceData = [...records].reverse();
-
-  filteredRecords = sourceData.filter(r => {
-    if (subVal && r.subId !== subVal) return false;
-    if (userVal && !String(r.user).toLowerCase().includes(userVal)) return false;
-    if (startVal && r.date < startVal) return false;
-    if (endVal && r.date > endVal) return false;
+  filteredRecords = [...records].reverse().filter(r => {
+    if(subVal   && r.subId !== subVal) return false;
+    if(userVal  && !String(r.user).toLowerCase().includes(userVal)) return false;
+    if(startVal && r.date < startVal)  return false;
+    if(endVal   && r.date > endVal)    return false;
     return true;
   });
 
-  currentPage = 1; // รีเซ็ตกลับไปหน้า 1
-  renderTable();   // สั่งแสดงตารางเฉพาะหน้าเพจปัจจุบัน
+  currentPage = 1;
+  renderTable();
 }
 
-// ฟังก์ชันล้างค่าตัวกรอง ให้ตรงกับปุ่มล้างเดิม
-function clearFilter() {
-  document.getElementById('fl-sub').value = '';
-  document.getElementById('fl-user').value = '';
-  document.getElementById('fl-from').value = '';
-  document.getElementById('fl-to').value = '';
+function clearFilter(){
+  ['fl-sub','fl-user','fl-from','fl-to'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
   applyFilter();
 }
 
 function populateDDs(){
-  const sOpts='<option value="">ทั้งหมด</option>'+subs.map(s=>
-    `<option value="${s.id}"${s.id===activeFilter.sub?' selected':''}>${s.id} — ${s.name}</option>`).join('');
-  const cOpts='<option value="">เลือก Sub...</option>'+subs.map(s=>
-    `<option value="${s.id}">${s.id}</option>`).join('');
-  document.getElementById('fl-sub').innerHTML=sOpts;
-  const cs=document.getElementById('chart-sub');
-  if(cs) cs.innerHTML=cOpts;
+  const sOpts = '<option value="">ทั้งหมด</option>' +
+    subs.map(s => `<option value="${s.id}"${s.id===activeFilter.sub?' selected':''}>${s.id} — ${s.name}</option>`).join('');
+  const cOpts = '<option value="">เลือก Sub...</option>' +
+    subs.map(s => `<option value="${s.id}">${s.id}</option>`).join('');
+  document.getElementById('fl-sub').innerHTML = sOpts;
+  const cs = document.getElementById('chart-sub');
+  if(cs) cs.innerHTML = cOpts;
 }
 
 function renderStats(){
-  const total=records.length;
-  const subsDone=new Set(records.map(r=>r.subId)).size;
-  const today=new Date().toISOString().split('T')[0];
-  const todayN=records.filter(r=>r.date===today).length;
-  const totalUsed=records.reduce((a,r)=>a+(parseFloat(r.used)||0),0);
-  document.getElementById('stats-row').innerHTML=`
+  const total    = records.length;
+  const subsDone = new Set(records.map(r => r.subId)).size;
+  const today    = new Date().toISOString().split('T')[0];
+  const todayN   = records.filter(r => r.date === today).length;
+  const totalUsed = records.reduce((a,r) => a + (parseFloat(r.used)||0), 0);
+  document.getElementById('stats-row').innerHTML = `
     <div class="stat"><div class="stat-val">${total}</div><div class="stat-lbl">Records ทั้งหมด</div></div>
     <div class="stat"><div class="stat-val">${subsDone}/${subs.length}</div><div class="stat-lbl">Sub ที่บันทึกแล้ว</div></div>
     <div class="stat"><div class="stat-val">${todayN}</div><div class="stat-lbl">บันทึกวันนี้</div></div>
@@ -1486,79 +1421,56 @@ function renderStats(){
 }
 
 function updateBadge(){
-  document.getElementById('hdr-badge').textContent=records.length+' rec';
+  document.getElementById('hdr-badge').textContent = records.length + ' rec';
 }
 
 /* ══════════════════════════════════════════════════════
-   FIX #3: VERTICAL DAILY BAR CHART
-══════════════════════════════════════════════════════ */
-/* ══════════════════════════════════════════════════════
-    FIX #3: VERTICAL DAILY BAR CHART
+   CHART
 ══════════════════════════════════════════════════════ */
 function renderChart(){
-  const subId=document.getElementById('chart-sub').value;
-  const area=document.getElementById('chart-area');
-  const summary=document.getElementById('chart-summary');
-  if(!subId){
-    area.innerHTML='<div class="section-empty">📈 เลือก Substation เพื่อดูกราฟ</div>';
-    summary.innerHTML='';
-    return;
-  }
-  const recs=getSubRecs(subId);
-  if(!recs.length){
-    area.innerHTML='<div class="section-empty">📭 ยังไม่มีข้อมูลสำหรับ '+subId+'</div>';
-    summary.innerHTML='';
-    return;
-  }
+  const subId   = document.getElementById('chart-sub').value;
+  const area    = document.getElementById('chart-area');
+  const summary = document.getElementById('chart-summary');
+  if(!subId){ area.innerHTML='<div class="section-empty">📈 เลือก Substation เพื่อดูกราฟ</div>'; summary.innerHTML=''; return; }
 
-  // Aggregate by date (daily)
-  const byDate={};
-  recs.forEach(r=>{
-    const d=r.date;
-    if(!byDate[d]) byDate[d]={date:d,used:0,count:0,lastTime:r.time||''};
-    byDate[d].used+=parseFloat(r.used)||0;
-    byDate[d].count++;
-    if((r.time||'')>(byDate[d].lastTime)) byDate[d].lastTime=r.time||'';
+  const recs = getSubRecs(subId);
+  if(!recs.length){ area.innerHTML=`<div class="section-empty">📭 ยังไม่มีข้อมูลสำหรับ ${subId}</div>`; summary.innerHTML=''; return; }
+
+  const byDate = {};
+  recs.forEach(r => {
+    if(!byDate[r.date]) byDate[r.date] = { date:r.date, used:0, count:0, lastTime:r.time||'' };
+    byDate[r.date].used  += parseFloat(r.used) || 0;
+    byDate[r.date].count++;
+    if((r.time||'') > byDate[r.date].lastTime) byDate[r.date].lastTime = r.time||'';
   });
 
-  const days=Object.values(byDate).sort((a,b)=>a.date.localeCompare(b.date));
-  const showDays=days.slice(-20); // show last 20 days max
-  const maxVal=Math.max(...showDays.map(d=>d.used),1);
-  const CHART_H=150;
+  const days     = Object.values(byDate).sort((a,b) => a.date.localeCompare(b.date));
+  const showDays = days.slice(-20);
+  const maxVal   = Math.max(...showDays.map(d => d.used), 1);
+  const CHART_H  = 150;
+  const sub      = subs.find(s => s.id === subId);
+  const dec      = sub ? sub.decimal : 2;
 
-  const bars=showDays.map(d=>{
-    const pct=Math.max(0,d.used)/maxVal;
-    const barH=Math.max(3,Math.round(pct*CHART_H));
-    const sub=subs.find(s=>s.id===subId);
-    const dec=sub?sub.decimal:2;
-    const valStr=parseFloat(d.used.toFixed(dec)).toLocaleString('th-TH',{maximumFractionDigits:dec});
-    const dateLabel=fmtChartDate(d.date); // DD/MM
-    const timeLabel=fmtTime(d.lastTime);  // HH:MM
-    // Full label: HH:MM\nDD/MM/YYYY
-    const fullDate=fmtDate(d.date); // DD/MM/YYYY
-    return `<div class="vbar-col" title="${timeLabel} ${fullDate} — ${valStr} kWh (${d.count} readings)">
+  const bars = showDays.map(d => {
+    const pct    = Math.max(0, d.used) / maxVal;
+    const barH   = Math.max(3, Math.round(pct * CHART_H));
+    const valStr = parseFloat(d.used.toFixed(dec)).toLocaleString('th-TH', { maximumFractionDigits:dec });
+    return `<div class="vbar-col" title="${fmtTime(d.lastTime)} ${fmtDate(d.date)} — ${valStr} kWh (${d.count} readings)">
       <div class="vbar-val">${valStr}</div>
-      <div class="vbar-space">
-        <div class="vbar-bar" style="height:${barH}px"></div>
-      </div>
-      <div class="vbar-label">${timeLabel}<br>${dateLabel}</div>
+      <div class="vbar-space"><div class="vbar-bar" style="height:${barH}px"></div></div>
+      <div class="vbar-label">${fmtTime(d.lastTime)}<br>${fmtChartDate(d.date)}</div>
     </div>`;
   }).join('');
 
-  area.innerHTML=`
+  area.innerHTML = `
     <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;font-family:var(--font-mono)">
       แสดงสูงสุด 20 วันล่าสุด · รวม ${days.length} วัน · hover เพื่อดูรายละเอียด
     </div>
-    <div class="vbar-scroll">
-      <div class="vbar-chart">${bars}</div>
-    </div>`;
+    <div class="vbar-scroll"><div class="vbar-chart">${bars}</div></div>`;
 
-  // Summary chips
-  const totalUsed=showDays.reduce((a,d)=>a+d.used,0);
-  const avgDaily=showDays.length?totalUsed/showDays.length:0;
-  const sub=subs.find(s=>s.id===subId);
-  const dec=sub?sub.decimal:2;
-  summary.innerHTML=`
+  const totalUsed = showDays.reduce((a,d) => a + d.used, 0);
+  const avgDaily  = showDays.length ? totalUsed / showDays.length : 0;
+  summary.innerHTML = `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
       <span class="chip chip-green">⚡ รวม ${parseFloat(totalUsed.toFixed(dec)).toLocaleString()} kWh</span>
       <span class="chip" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)">
@@ -1568,14 +1480,15 @@ function renderChart(){
 }
 
 function renderAllChart(){
-  const area=document.getElementById('all-chart');
-  const summary=subs.map(s=>({
-    id:s.id,
-    total:records.filter(r=>r.subId===s.id).reduce((a,r)=>a+(parseFloat(r.used)||0),0)
-  })).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
-  if(!summary.length){ area.innerHTML='<div class="section-empty">📊 ยังไม่มีข้อมูล</div>'; return; }
-  const maxVal=Math.max(...summary.map(x=>x.total),1);
-  area.innerHTML=summary.map(x=>`<div class="bar-row">
+  const area    = document.getElementById('all-chart');
+  const summary = subs.map(s => ({
+    id:    s.id,
+    total: records.filter(r => r.subId === s.id).reduce((a,r) => a + (parseFloat(r.used)||0), 0)
+  })).filter(x => x.total > 0).sort((a,b) => b.total - a.total);
+
+  if(!summary.length){ area.innerHTML = '<div class="section-empty">📊 ยังไม่มีข้อมูล</div>'; return; }
+  const maxVal = Math.max(...summary.map(x => x.total), 1);
+  area.innerHTML = summary.map(x => `<div class="bar-row">
     <div class="bar-label">${x.id}</div>
     <div class="bar-track"><div class="bar-fill" style="width:${Math.round(x.total/maxVal*100)}%"></div></div>
     <div class="bar-val">${Math.round(x.total).toLocaleString()}</div>
@@ -1583,45 +1496,41 @@ function renderAllChart(){
 }
 
 /* ══════════════════════════════════════════════════════
-    QR
+   QR
 ══════════════════════════════════════════════════════ */
-function buildUrl(subId){ return QR_BASE_URL.replace(/\/$/,'')+' ?sub='+encodeURIComponent(subId); }
 function renderQR(){
-  const grid=document.getElementById('qr-grid');
-  grid.innerHTML='';
-  subs.forEach(sub=>{
-    const url=(QR_BASE_URL.replace(/\/$/,'')+'?sub='+encodeURIComponent(sub.id));
-    const qid='qr_'+sub.id.replace(/\W/g,'_');
-    const div=document.createElement('div');
-    div.className='qr-item';
-    div.innerHTML=`
+  const grid = document.getElementById('qr-grid');
+  grid.innerHTML = '';
+  subs.forEach(sub => {
+    const url = QR_BASE_URL.replace(/\/$/, '') + '?sub=' + encodeURIComponent(sub.id);
+    const qid = 'qr_' + sub.id.replace(/\W/g,'_');
+    const div = document.createElement('div');
+    div.className = 'qr-item';
+    div.innerHTML = `
       <div class="qi-id">${sub.id}</div>
       <div class="qi-name">${sub.name}<br><span style="color:var(--purple)">${sub.zone}</span></div>
       <div class="qi-qr" id="${qid}"></div>
-      <div class="qi-url">${url.length>55?url.slice(0,52)+'…':url}</div>`;
+      <div class="qi-url">${url.length>55 ? url.slice(0,52)+'…' : url}</div>`;
     grid.appendChild(div);
-    setTimeout(()=>{
+    setTimeout(() => {
       try{
-        document.getElementById(qid).innerHTML='';
-        new QRCode(document.getElementById(qid),{text:url,width:110,height:110,colorDark:'#000',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M});
+        document.getElementById(qid).innerHTML = '';
+        new QRCode(document.getElementById(qid), { text:url, width:110, height:110, colorDark:'#000', colorLight:'#fff', correctLevel:QRCode.CorrectLevel.M });
       }catch(e){}
-    },80);
+    }, 80);
   });
 }
 
 /* ══════════════════════════════════════════════════════
-    FIX #1: SETTINGS — SUB MANAGEMENT with EDIT
+   SETTINGS — SUB MANAGEMENT
 ══════════════════════════════════════════════════════ */
 function renderSubList(){
-  document.getElementById('sub-count').textContent=subs.length;
-  if(!subs.length){
-    document.getElementById('sub-list').innerHTML='<div class="section-empty">ยังไม่มี Substation</div>';
-    return;
-  }
-  document.getElementById('sub-list').innerHTML=subs.map((s,i)=>{
-    const cnt=records.filter(r=>r.subId===s.id).length;
-    const totalUsed=records.filter(r=>r.subId===s.id).reduce((a,r)=>a+(parseFloat(r.used)||0),0);
-    const dec=s.decimal!==undefined?s.decimal:2;
+  document.getElementById('sub-count').textContent = subs.length;
+  if(!subs.length){ document.getElementById('sub-list').innerHTML='<div class="section-empty">ยังไม่มี Substation</div>'; return; }
+  document.getElementById('sub-list').innerHTML = subs.map((s,i) => {
+    const cnt       = records.filter(r => r.subId === s.id).length;
+    const totalUsed = records.filter(r => r.subId === s.id).reduce((a,r) => a+(parseFloat(r.used)||0), 0);
+    const dec       = s.decimal !== undefined ? s.decimal : 2;
     return `<div class="sub-row">
       <div class="sub-row-info">
         <div class="sub-row-id">${s.id}</div>
@@ -1630,123 +1539,107 @@ function renderSubList(){
       </div>
       <div class="sub-row-actions">
         <button class="btn btn-primary btn-sm" onclick="openEditSub(${i})">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="removeSub(${i})">🗑</button>
+        <button class="btn btn-danger btn-sm"  onclick="removeSub(${i})">🗑</button>
       </div>
     </div>`;
   }).join('');
 }
 
 function addSub(){
-  const id=document.getElementById('new-id').value.trim().toUpperCase();
-  const name=document.getElementById('new-name').value.trim();
-  const decimal=parseInt(document.getElementById('new-decimal').value)||2;
-  const zone=document.getElementById('new-zone').value.trim()||'Custom';
-  if(!id||!name) return toast('กรอก ID และชื่อด้วย','err');
-  if(subs.find(s=>s.id===id)) return toast('ID นี้มีอยู่แล้ว','err');
-  subs.push({id,name,zone,decimal});
+  const id      = document.getElementById('new-id').value.trim().toUpperCase();
+  const name    = document.getElementById('new-name').value.trim();
+  const decimal = parseInt(document.getElementById('new-decimal').value) || 2;
+  const zone    = document.getElementById('new-zone').value.trim() || 'Custom';
+  if(!id || !name) return toast('กรอก ID และชื่อด้วย','err');
+  if(subs.find(s => s.id === id)) return toast('ID นี้มีอยู่แล้ว','err');
+  subs.push({ id, name, zone, decimal, multiplier:1, unit:'kWh' });
   persist();
-  document.getElementById('new-id').value='';
-  document.getElementById('new-name').value='';
-  document.getElementById('new-decimal').value='2';
-  document.getElementById('new-zone').value='';
+  ['new-id','new-name','new-zone'].forEach(x => { document.getElementById(x).value=''; });
+  document.getElementById('new-decimal').value = '2';
   renderSubList(); renderZoneAreas(); populateDDs();
-  toast('✅ เพิ่ม '+id,'ok');
+  toast('✅ เพิ่ม ' + id,'ok');
 }
 
 function removeSub(i){
-  const s=subs[i];
-  const cnt=records.filter(r=>r.subId===s.id).length;
-  const msg=cnt>0
-    ?`ลบ ${s.id} — ${s.name}?\n(มีข้อมูล ${cnt} records ที่เชื่อมกับตู้นี้)`
-    :`ลบ ${s.id} — ${s.name}?`;
+  const s   = subs[i];
+  const cnt = records.filter(r => r.subId === s.id).length;
+  const msg = cnt > 0
+    ? `ลบ ${s.id} — ${s.name}?\n(มีข้อมูล ${cnt} records ที่เชื่อมกับตู้นี้)`
+    : `ลบ ${s.id} — ${s.name}?`;
   if(!confirm(msg)) return;
-  subs.splice(i,1);
+  subs.splice(i, 1);
   persist();
   renderSubList(); renderZoneAreas(); populateDDs();
-  toast('ลบ '+s.id);
+  toast('ลบ ' + s.id);
 }
 
 /* ══════════════════════════════════════════════════════
-    FIX #4: EXPORT EXCEL respects active filter
+   EXPORT / IMPORT
 ══════════════════════════════════════════════════════ */
 function exportExcel(){
-  const hasFilter=isFilterActive();
-  // 💡 ปรับให้ดึงจากดึงตัวแปร filteredRecords ล่าสุดที่โชว์บนตารางตู้ไฟได้เลย
-  const dataToExport=hasFilter?[...filteredRecords]:[...records].reverse();
-  
-  if(!dataToExport.length) return toast(hasFilter?'ไม่มีข้อมูลตาม Filter ที่ตั้งไว้':'ยังไม่มีข้อมูล','err');
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.json_to_sheet(dataToExport.map(r=>({
-    'ID':r.id,
-    'Substation ID':r.subId,
-    'Substation Name':r.subName,
-    'Zone':r.zone,
-    'Date':fmtDate(r.date),
-    'Time':fmtTime(r.time),
-    'kWh (Cumulative)':fmtNum(r.kwh,r.subId),
-    'Used (kWh)':fmtNum(r.used,r.subId),
-    'User':r.user,
-    'Note':r.note,
-    'Timestamp':r.ts
+  const hasFilter    = isFilterActive();
+  const dataToExport = hasFilter ? [...filteredRecords] : [...records].reverse();
+  if(!dataToExport.length) return toast(hasFilter?'ไม่มีข้อมูลตาม Filter':'ยังไม่มีข้อมูล','err');
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(dataToExport.map(r => ({
+    'ID': r.id, 'Substation ID': r.subId, 'Substation Name': r.subName, 'Zone': r.zone,
+    'Date': fmtDate(r.date), 'Time': fmtTime(r.time),
+    'kWh (Cumulative)': fmtNum(r.kwh, r.subId), 'Used (kWh)': fmtNum(r.used, r.subId),
+    'User': r.user, 'Note': r.note, 'Timestamp': r.ts
   })));
-  ws['!cols']=Array(11).fill({wch:18});
-  const sheetName=hasFilter?'Filtered_Records':'All_Records';
-  XLSX.utils.book_append_sheet(wb,ws,sheetName);
-  const filename=`Meter_${hasFilter?'Filtered_':''}${new Date().toISOString().slice(0,10)}.xlsx`;
-  XLSX.writeFile(wb,filename);
-  toast(`✅ Export ${dataToExport.length} rows${hasFilter?' (filtered)':''}`,  'ok');
+  ws['!cols'] = Array(11).fill({ wch:18 });
+  XLSX.utils.book_append_sheet(wb, ws, hasFilter?'Filtered_Records':'All_Records');
+  XLSX.writeFile(wb, `Meter_${hasFilter?'Filtered_':''}${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`✅ Export ${dataToExport.length} rows${hasFilter?' (filtered)':''}`, 'ok');
 }
 
 function exportJSON(){
-  const blob=new Blob([JSON.stringify({subs,records,exported:new Date().toISOString()},null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='substation_backup_'+Date.now()+'.json';
+  const blob = new Blob([JSON.stringify({ subs, records, exported:new Date().toISOString() }, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'substation_backup_' + Date.now() + '.json';
   a.click();
   toast('💾 Backup สำเร็จ','ok');
 }
 
 function doImport(e){
-  const file=e.target.files[0]; if(!file) return;
-  const r=new FileReader();
-  r.onload=ev=>{
+  const file = e.target.files[0]; if(!file) return;
+  const r = new FileReader();
+  r.onload = ev => {
     try{
-      const d=JSON.parse(ev.target.result);
-      if(d.subs) subs=d.subs.map(s=>({...s,decimal:s.decimal!==undefined?s.decimal:2}));
-      if(d.records) records=d.records;
-      
-      // ✨ [เพิ่มจุดเซฟ] รีเซ็ตหน้ากลับเพจ 1 ป้องกันบั๊กแสดงตารางเอ๋อ
-      currentPage = 1; 
+      const d = JSON.parse(ev.target.result);
+      if(d.subs)     subs     = d.subs.map(s => ({ ...s, decimal: s.decimal!==undefined?s.decimal:2 }));
+      if(d.records)  records  = d.records;
+      currentPage = 1;
       persist(); renderAll();
       toast(`📂 Import สำเร็จ — ${records.length} records`,'ok');
     }catch(err){ toast('ไฟล์ไม่ถูกต้อง','err'); }
   };
   r.readAsText(file);
-  e.target.value='';
+  e.target.value = '';
 }
 
+// ✅ clearCache — ไม่ reference INIT_SUBS อีกต่อไป
 function clearCache(){
   if(!confirm('ล้าง Cache ในเครื่องนี้?\n(ข้อมูลใน Google Sheets ยังอยู่ครบ)')) return;
-  records=[]; subs=INIT_SUBS; 
-  
-  // ✨ [เพิ่มจุดเซฟ] ล้างสถานะตัวกรองและการแบ่งหน้าทั้งหมดให้เคลียร์สะอาด
-  filteredRecords=[]; 
-  currentPage=1; 
-  
-  persist(); renderAll();
-  toast('ล้าง Cache แล้ว — กด Refresh โหลดจาก Sheets','warn');
+  records = []; subs = []; filteredRecords = []; currentPage = 1;
+  localStorage.removeItem('records');
+  localStorage.removeItem('subs');
+  toast('ล้าง Cache แล้ว — กำลังโหลดจาก Sheets ใหม่...','warn');
+  loadFromServer();
 }
 
 /* ══════════════════════════════════════════════════════
-    TOAST
+   TOAST
 ══════════════════════════════════════════════════════ */
-function toast(msg,type=''){
-  const t=document.getElementById('toast');
+function toast(msg, type=''){
+  const t = document.getElementById('toast');
   if(!t) return;
-  t.textContent=msg;
-  t.className='on'+(type?' '+type:'');
+  t.textContent = msg;
+  t.className   = 'on' + (type ? ' '+type : '');
   clearTimeout(t._t);
-  t._t=setTimeout(()=>{ t.className=''; },3200);
+  t._t = setTimeout(() => { t.className = ''; }, 3200);
 }
 
 init();
