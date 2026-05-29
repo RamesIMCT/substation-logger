@@ -268,6 +268,19 @@ tr:hover td{background:var(--surface-2)}
   .qr-grid{grid-template-columns:repeat(3,1fr)}
   .f-3col{grid-template-columns:1fr 1fr 1fr}
 }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-5px); }
+  80%       { transform: translateX(5px); }
+}
+   
 </style>
 </head>
 <body>
@@ -723,10 +736,10 @@ function applyAppMode(mode){
    
 // ✅ Login — role จาก Server ตัดสิน mode ทันที
 async function handleLogin(){
-  const userVal    = document.getElementById('login-user').value.trim();
-  const passVal    = document.getElementById('login-pass').value.trim();
-  const errDiv     = document.getElementById('login-err');
-  const loginBtn   = document.getElementById('login-btn');
+  const userVal  = document.getElementById('login-user').value.trim();
+  const passVal  = document.getElementById('login-pass').value.trim();
+  const errDiv   = document.getElementById('login-err');
+  const loginBtn = document.getElementById('login-btn');
 
   if(!userVal || !passVal){
     errDiv.style.display = 'block';
@@ -734,43 +747,65 @@ async function handleLogin(){
     return;
   }
 
-  // แสดง loading ระหว่างรอ Server
+  // ✅ แสดง loading
   errDiv.style.display = 'none';
-  if(loginBtn){ loginBtn.disabled = true; loginBtn.textContent = '⏳ กำลังตรวจสอบ...'; }
+  const originalText = loginBtn ? loginBtn.textContent : '';
+  if(loginBtn){
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = `
+      <span style="display:inline-flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          style="animation:spin 0.8s linear infinite">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4
+                   M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+        กำลังตรวจสอบ...
+      </span>`;
+  }
 
   try{
     const res = await apiPost({ action:'login', username:userVal, password:passVal });
-
     if(res && res.success){
       currentUser = res.name || userVal;
       applyAppMode(res.role === 'admin' ? 'admin' : 'basic');
-      document.getElementById('login-gate').style.display = 'none';
 
-      // แสดงชื่อผู้ใช้ที่ login อยู่ (ถ้ามี element นี้ใน HTML)
-      const userBadge = document.getElementById('current-user-badge');
-      if(userBadge) userBadge.textContent = `👤 ${currentUser}`;
+      // ✅ fade out หน้า login ก่อนเปิดแอป
+      const gate = document.getElementById('login-gate');
+      gate.style.transition = 'opacity 0.3s';
+      gate.style.opacity = '0';
+      setTimeout(() => {
+        gate.style.display = 'none';
+        gate.style.opacity = '1';
+      }, 300);
 
-      // auto-fill ชื่อในช่องกรอกมิเตอร์
       const inUser = document.getElementById('in-user');
       if(inUser) inUser.value = currentUser;
-
+      const userBadge = document.getElementById('current-user-badge');
+      if(userBadge) userBadge.textContent = `👤 ${currentUser}`;
       renderAll();
 
     } else {
+      // ✅ เขย่า input เมื่อรหัสผิด
       errDiv.style.display = 'block';
       errDiv.innerText = '❌ ' + (res?.error || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+      ['login-user','login-pass'].forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.style.animation = 'shake 0.4s ease';
+        setTimeout(() => { el.style.animation = ''; }, 400);
+      });
     }
-
   }catch(e){
     errDiv.style.display = 'block';
     errDiv.innerText = '❌ เชื่อมต่อ Server ไม่ได้ กรุณาลองใหม่';
-    console.error('Login error:', e);
   }finally{
-    if(loginBtn){ loginBtn.disabled = false; loginBtn.textContent = 'เข้าสู่ระบบ'; }
+    // ✅ คืนปุ่มเสมอ ไม่ว่าจะสำเร็จหรือไม่
+    if(loginBtn){
+      loginBtn.disabled = false;
+      loginBtn.textContent = originalText;
+    }
   }
 }
-
-// ✅ ลบ toggleAdmin() ออกทั้งก้อน ไม่ใช้แล้ว
 
 /* ══════════════════════════════════════════════════════
    THEME
