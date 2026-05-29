@@ -300,7 +300,7 @@ tr:hover td{background:var(--surface-2)}
   </div>
   <div class="hdr-right">
     <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
-    <button class="btn-admin" id="btn-admin" onclick="toggleAdmin()">🔐 ทั่วไป</button>
+    <!-- <button class="btn-admin" id="btn-admin" onclick="toggleAdmin()">🔐 ทั่วไป</button>-->
     <div class="sync-dot" id="sync-dot"></div>
   </div>
 </div>
@@ -713,44 +713,64 @@ function getSubRecs(subId){
    LOGIN — ตรวจสอบฝั่ง Server ✅ (ไม่เก็บ password ใน browser)
 ══════════════════════════════════════════════════════ */
 // ── ฟังก์ชันกลางสำหรับอัปเดต UI ตาม appMode ──
-function applyAppMode(mode) {
+// ✅ ตั้งค่า UI ตาม role — เรียกครั้งเดียวหลัง login
+function applyAppMode(mode){
   appMode = mode;
-  const btn     = document.getElementById('btn-admin');
   const tabsBar = document.getElementById('tabs-bar');
-  if(!btn || !tabsBar) return;
-
-  if(mode === 'admin'){
-    btn.textContent = '🔓 แอดมิน';
-    btn.classList.add('on');
-    tabsBar.className = 'tabs admin-mode';
-  } else {
-    btn.textContent = '🔐 ทั่วไป';
-    btn.classList.remove('on');
-    tabsBar.className = 'tabs basic-mode';
-  }
+  if(!tabsBar) return;
+  tabsBar.className = mode === 'admin' ? 'tabs admin-mode' : 'tabs basic-mode';
 }
-// ── handleLogin — เรียก applyAppMode แทนตั้งค่าตรง ──
+   
+// ✅ Login — role จาก Server ตัดสิน mode ทันที
 async function handleLogin(){
-  const userVal = document.getElementById('login-user').value.trim();
-  const passVal = document.getElementById('login-pass').value.trim();
-  const errDiv  = document.getElementById('login-err');
+  const userVal    = document.getElementById('login-user').value.trim();
+  const passVal    = document.getElementById('login-pass').value.trim();
+  const errDiv     = document.getElementById('login-err');
+  const loginBtn   = document.getElementById('login-btn');
+
+  if(!userVal || !passVal){
+    errDiv.style.display = 'block';
+    errDiv.innerText = '⚠️ กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
+    return;
+  }
+
+  // แสดง loading ระหว่างรอ Server
   errDiv.style.display = 'none';
+  if(loginBtn){ loginBtn.disabled = true; loginBtn.textContent = '⏳ กำลังตรวจสอบ...'; }
+
   try{
     const res = await apiPost({ action:'login', username:userVal, password:passVal });
+
     if(res && res.success){
-      currentUser = res.name;
-      applyAppMode(res.role === 'admin' ? 'admin' : 'basic'); // ✅ อัปเดต UI ด้วย
+      currentUser = res.name || userVal;
+      applyAppMode(res.role === 'admin' ? 'admin' : 'basic');
       document.getElementById('login-gate').style.display = 'none';
-      renderAll(); // ✅ วาดหน้าใหม่หลัง login
+
+      // แสดงชื่อผู้ใช้ที่ login อยู่ (ถ้ามี element นี้ใน HTML)
+      const userBadge = document.getElementById('current-user-badge');
+      if(userBadge) userBadge.textContent = `👤 ${currentUser}`;
+
+      // auto-fill ชื่อในช่องกรอกมิเตอร์
+      const inUser = document.getElementById('in-user');
+      if(inUser) inUser.value = currentUser;
+
+      renderAll();
+
     } else {
       errDiv.style.display = 'block';
       errDiv.innerText = '❌ ' + (res?.error || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
     }
+
   }catch(e){
     errDiv.style.display = 'block';
-    errDiv.innerText = '❌ เชื่อมต่อ Server ไม่ได้ — ' + e.message;
+    errDiv.innerText = '❌ เชื่อมต่อ Server ไม่ได้ กรุณาลองใหม่';
+    console.error('Login error:', e);
+  }finally{
+    if(loginBtn){ loginBtn.disabled = false; loginBtn.textContent = 'เข้าสู่ระบบ'; }
   }
 }
+
+// ✅ ลบ toggleAdmin() ออกทั้งก้อน ไม่ใช้แล้ว
 
 /* ══════════════════════════════════════════════════════
    THEME
@@ -881,30 +901,8 @@ function renderAll(){
 }
 
 /* ══════════════════════════════════════════════════════
-   ADMIN & TABS
+ TABS
 ══════════════════════════════════════════════════════ */
-// ── toggleAdmin — ใช้ applyAppMode เช่นกัน ──
-function toggleAdmin(){
-  if(appMode === 'basic'){
-    const pwd = prompt('🔐 รหัสผ่านผู้ดูแลระบบ:');
-    if(pwd === null) return;
-    apiPost({ action:'login', username:'admin', password:pwd })
-      .then(res => {
-        if(res && res.success && res.role === 'admin'){
-          applyAppMode('admin'); // ✅ อัปเดต UI กลาง
-          toast('เข้าสู่โหมดแอดมิน','ok');
-        } else {
-          toast('รหัสผ่านไม่ถูกต้อง','err');
-        }
-      })
-      .catch(() => toast('เชื่อมต่อ Server ไม่ได้','err'));
-  } else {
-    applyAppMode('basic'); // ✅ ออกจาก admin
-    toast('กลับโหมดทั่วไป');
-    goTab('entry');
-  }
-}
-
 const TAB_ORDER = ['entry','data','chart','qr','settings'];
 function goTab(name){
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1653,6 +1651,18 @@ function toast(msg, type=''){
   clearTimeout(t._t);
   t._t = setTimeout(() => { t.className = ''; }, 3200);
 }
+/* ══════════════════════════════════════════════════════
+   ENTER KEY — LOGIN
+══════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  ['login-user','login-pass'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', e => {
+      if(e.key === 'Enter') handleLogin();
+    });
+  });
+});
+
 
 init();
 </script>
