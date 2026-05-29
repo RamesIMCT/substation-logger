@@ -712,6 +712,24 @@ function getSubRecs(subId){
 /* ══════════════════════════════════════════════════════
    LOGIN — ตรวจสอบฝั่ง Server ✅ (ไม่เก็บ password ใน browser)
 ══════════════════════════════════════════════════════ */
+// ── ฟังก์ชันกลางสำหรับอัปเดต UI ตาม appMode ──
+function applyAppMode(mode) {
+  appMode = mode;
+  const btn     = document.getElementById('btn-admin');
+  const tabsBar = document.getElementById('tabs-bar');
+  if(!btn || !tabsBar) return;
+
+  if(mode === 'admin'){
+    btn.textContent = '🔓 แอดมิน';
+    btn.classList.add('on');
+    tabsBar.className = 'tabs admin-mode';
+  } else {
+    btn.textContent = '🔐 ทั่วไป';
+    btn.classList.remove('on');
+    tabsBar.className = 'tabs basic-mode';
+  }
+}
+// ── handleLogin — เรียก applyAppMode แทนตั้งค่าตรง ──
 async function handleLogin(){
   const userVal = document.getElementById('login-user').value.trim();
   const passVal = document.getElementById('login-pass').value.trim();
@@ -721,9 +739,9 @@ async function handleLogin(){
     const res = await apiPost({ action:'login', username:userVal, password:passVal });
     if(res && res.success){
       currentUser = res.name;
-      appMode     = res.role === 'admin' ? 'admin' : 'basic';
+      applyAppMode(res.role === 'admin' ? 'admin' : 'basic'); // ✅ อัปเดต UI ด้วย
       document.getElementById('login-gate').style.display = 'none';
-      if(typeof initDashboard === 'function') initDashboard();
+      renderAll(); // ✅ วาดหน้าใหม่หลัง login
     } else {
       errDiv.style.display = 'block';
       errDiv.innerText = '❌ ' + (res?.error || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
@@ -865,19 +883,15 @@ function renderAll(){
 /* ══════════════════════════════════════════════════════
    ADMIN & TABS
 ══════════════════════════════════════════════════════ */
+// ── toggleAdmin — ใช้ applyAppMode เช่นกัน ──
 function toggleAdmin(){
-  const btn     = document.getElementById('btn-admin');
-  const tabsBar = document.getElementById('tabs-bar');
   if(appMode === 'basic'){
-    // ✅ ใช้ login จาก server แทน hardcode ADMIN_PASS
     const pwd = prompt('🔐 รหัสผ่านผู้ดูแลระบบ:');
     if(pwd === null) return;
     apiPost({ action:'login', username:'admin', password:pwd })
       .then(res => {
         if(res && res.success && res.role === 'admin'){
-          appMode = 'admin';
-          btn.textContent = '🔓 แอดมิน'; btn.classList.add('on');
-          tabsBar.className = 'tabs admin-mode';
+          applyAppMode('admin'); // ✅ อัปเดต UI กลาง
           toast('เข้าสู่โหมดแอดมิน','ok');
         } else {
           toast('รหัสผ่านไม่ถูกต้อง','err');
@@ -885,12 +899,11 @@ function toggleAdmin(){
       })
       .catch(() => toast('เชื่อมต่อ Server ไม่ได้','err'));
   } else {
-    appMode = 'basic';
-    btn.textContent = '🔐 ทั่วไป'; btn.classList.remove('on');
-    tabsBar.className = 'tabs basic-mode';
+    applyAppMode('basic'); // ✅ ออกจาก admin
     toast('กลับโหมดทั่วไป');
     goTab('entry');
   }
+}
 }
 
 const TAB_ORDER = ['entry','data','chart','qr','settings'];
